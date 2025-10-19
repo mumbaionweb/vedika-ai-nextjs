@@ -71,30 +71,36 @@ export default function Home() {
       await websocketService.connect();
 
       // Subscribe to messages
-      unsubscribeRef.current = websocketService.onMessage((chunk: ChatChunk) => {
-        console.log('📨 Received chunk:', chunk);
+      unsubscribeRef.current = websocketService.onMessage((data: any) => {
+        console.log('📨 Received chunk:', data);
 
-        if (chunk.type === 'chunk' && chunk.content) {
-          setStreamingResponse(prev => prev + chunk.content);
-        } else if (chunk.type === 'done') {
+        if (data.type === 'conversation_started') {
+          // Store conversation ID when conversation starts
+          setConversationId(data.conversation_id);
+        } else if (data.type === 'stream_start') {
+          // Stream is starting
+          console.log('▶️ Stream started');
+        } else if (data.type === 'content_chunk') {
+          // Append content chunk to streaming response
+          setStreamingResponse(prev => prev + data.content);
+        } else if (data.type === 'stream_complete') {
           console.log('✅ Streaming complete');
           setIsSubmitting(false);
           
           // Update credits if provided
-          if (chunk.credits_remaining !== undefined) {
-            setCredits(chunk.credits_remaining);
+          if (data.credits?.remaining !== undefined) {
+            setCredits(data.credits.remaining);
           }
 
-          // Store conversation ID and redirect after a brief delay
-          if (chunk.conversation_id) {
-            setConversationId(chunk.conversation_id);
+          // Redirect after a brief delay to show complete response
+          if (conversationId) {
             setTimeout(() => {
-              router.push(`/chat/${chunk.conversation_id}`);
-            }, 1000);
+              router.push(`/chat/${conversationId}`);
+            }, 1500);
           }
-        } else if (chunk.type === 'error') {
-          console.error('❌ Streaming error:', chunk.error);
-          setError(chunk.error || 'An error occurred');
+        } else if (data.type === 'error') {
+          console.error('❌ Streaming error:', data.error || data.message);
+          setError(data.error || data.message || 'An error occurred');
           setIsSubmitting(false);
         }
       });

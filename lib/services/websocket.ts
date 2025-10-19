@@ -19,11 +19,21 @@ export interface StreamChatMessage {
 }
 
 export interface ChatChunk {
-  type: 'chunk' | 'done' | 'error';
-  content?: string;
+  type: 'conversation_started' | 'stream_start' | 'content_chunk' | 'stream_complete' | 'error';
   conversation_id?: string;
+  content?: string;
+  chunk_id?: number;
+  timestamp?: string;
+  full_response?: string;
+  total_chunks?: number;
+  credits?: {
+    remaining: number;
+    used_today: number;
+    daily_total: number;
+    message: string;
+  };
   error?: string;
-  credits_remaining?: number;
+  message?: string;
 }
 
 type MessageHandler = (chunk: ChatChunk) => void;
