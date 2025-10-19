@@ -47,7 +47,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* New Chat Button */}
           <button 
-            className="w-full h-12 flex items-center justify-center p-3 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
+            className="w-12 h-12 mx-auto flex items-center justify-center p-3 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
             aria-label="New Chat"
             title="New Chat"
           >
@@ -71,9 +71,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
           <div className="space-y-2">
             {/* Chat history will go here */}
-            <p className="text-secondary-600 text-sm text-center mt-8">
-              No chat history yet
-            </p>
           </div>
         </div>
 
