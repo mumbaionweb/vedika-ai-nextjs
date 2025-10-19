@@ -40,7 +40,7 @@ export default function VaiLogo({ className = '', width = 120, height = 40 }: Va
 
       {/* .ai */}
       <text 
-        x="22" 
+        x="20" 
         y="18" 
         fontFamily="Inter, sans-serif"
         fontWeight="600" 
