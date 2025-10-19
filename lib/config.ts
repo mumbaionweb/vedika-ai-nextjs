@@ -9,7 +9,7 @@ export const config = {
     // In production, point directly to backend with CORS configured
     baseUrl: process.env.NEXT_PUBLIC_USE_PROXY === 'true' 
       ? '/api/proxy'
-      : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8002'),
+      : (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod'),
     timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000'),
   },
   app: {

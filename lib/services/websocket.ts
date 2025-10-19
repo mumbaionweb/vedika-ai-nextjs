@@ -6,9 +6,9 @@
 import config from '../config';
 import { DeviceManager } from '../utils/deviceManager';
 
-// WebSocket URL (replace with your actual WebSocket URL)
+// WebSocket URL for streaming chat
 const WS_URL = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 
-  'wss://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod';
+  'wss://wa33d8dcw2.execute-api.ap-south-1.amazonaws.com/prod';
 
 export interface StreamChatMessage {
   message: string;
