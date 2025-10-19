@@ -26,9 +26,11 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   useEffect(() => {
     // Check if this is a new conversation with streaming in progress
     const pendingMessage = sessionStorage.getItem('pending_message');
+    const optimisticMessageStr = sessionStorage.getItem('optimistic_message');
+    const isFollowup = sessionStorage.getItem('optimistic_is_followup') === 'true';
     
     if (pendingMessage && !hasSetupStreamingRef.current) {
-      // This is a new conversation - streaming will happen here
+      // This is a NEW conversation - streaming will happen here
       console.log('🆕 New conversation detected, setting up streaming...');
       hasSetupStreamingRef.current = true; // Mark as setup to prevent double runs
       
@@ -58,8 +60,33 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           unsubscribe();
         }
       };
-    } else if (!pendingMessage) {
-      // Load existing conversation from backend (only if not streaming)
+    } else if (optimisticMessageStr && isFollowup && !hasSetupStreamingRef.current) {
+      // This is a FOLLOW-UP with optimistic message - show it immediately
+      console.log('💬 Follow-up detected with optimistic message...');
+      hasSetupStreamingRef.current = true;
+      
+      const optimisticMsg = JSON.parse(optimisticMessageStr);
+      
+      // Clear optimistic flags
+      sessionStorage.removeItem('optimistic_message');
+      sessionStorage.removeItem('optimistic_is_followup');
+      
+      // Load existing conversation FIRST (parallel with WebSocket setup)
+      loadConversationWithOptimisticMessage(optimisticMsg);
+      
+      // Set up streaming listener for the AI response
+      const unsubscribe = setupStreamingListener();
+      setIsStreaming(true);
+      
+      // Return cleanup function
+      return () => {
+        console.log('🧹 Cleaning up follow-up streaming listener');
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    } else if (!pendingMessage && !optimisticMessageStr) {
+      // Load existing conversation from backend (normal case)
       loadConversation();
       
       // No cleanup needed for API call
@@ -150,6 +177,45 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       if (!isStreaming) {
         setError(err instanceof Error ? err.message : 'Failed to load conversation');
       }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // OPTIMIZATION: Load conversation with optimistic message (for follow-ups)
+  async function loadConversationWithOptimisticMessage(optimisticMsg: any) {
+    console.log('⚡ Loading conversation with optimistic message (parallel)...');
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch conversation from backend
+      const result = await apiService.getConversation(chatId);
+
+      if (result.success) {
+        // Add existing messages + optimistic message
+        const allMessages = [...result.data.messages, optimisticMsg];
+        setMessages(allMessages);
+        
+        console.log('✅ Loaded conversation + optimistic message:', allMessages.length, 'total messages');
+        
+        // Set title from first user message
+        const firstUserMessage = result.data.messages.find(m => m.role === 'user');
+        if (firstUserMessage) {
+          const title = firstUserMessage.content.length > 50 
+            ? firstUserMessage.content.substring(0, 50) + '...'
+            : firstUserMessage.content;
+          setConversationTitle(title);
+        }
+      } else {
+        // On error, still show optimistic message
+        setMessages([optimisticMsg]);
+        console.warn('⚠️ Failed to load conversation, showing optimistic message only');
+      }
+    } catch (err) {
+      // On error, still show optimistic message
+      setMessages([optimisticMsg]);
+      console.error('❌ Error loading conversation:', err);
     } finally {
       setLoading(false);
     }

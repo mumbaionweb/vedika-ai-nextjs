@@ -60,6 +60,18 @@ export default function Footer() {
         agents: 'technical' as const,
       };
 
+      // Store optimistic message for chat page to display immediately
+      const optimisticMessage = {
+        message_id: `optimistic-${Date.now()}`,
+        role: 'user',
+        content: message,
+        created_at: new Date().toISOString(),
+        optimistic: true,
+      };
+      
+      sessionStorage.setItem('optimistic_message', JSON.stringify(optimisticMessage));
+      sessionStorage.setItem('optimistic_is_followup', 'true');
+
       // Send follow-up message via WebSocket Context
       await send({
         routeKey: 'stream_chat',
@@ -77,6 +89,9 @@ export default function Footer() {
     } catch (error) {
       console.error('Failed to send follow-up:', error);
       setIsSubmitting(false);
+      // Clear optimistic message on error
+      sessionStorage.removeItem('optimistic_message');
+      sessionStorage.removeItem('optimistic_is_followup');
     }
   };
 
