@@ -155,12 +155,22 @@ export class WebSocketService {
    * Add message handler
    */
   onMessage(handler: MessageHandler): () => void {
+    console.log('➕ Adding message handler, total handlers:', this.messageHandlers.size + 1);
     this.messageHandlers.add(handler);
     
     // Return unsubscribe function
     return () => {
+      console.log('➖ Removing message handler, remaining:', this.messageHandlers.size - 1);
       this.messageHandlers.delete(handler);
     };
+  }
+
+  /**
+   * Clear all message handlers
+   */
+  clearHandlers(): void {
+    console.log('🗑️ Clearing all message handlers');
+    this.messageHandlers.clear();
   }
 
   /**

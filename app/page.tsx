@@ -71,7 +71,7 @@ export default function Home() {
       sessionStorage.setItem('pending_query_type', queryTypeMap[selectedAgent as keyof typeof queryTypeMap]);
       
       // Subscribe to messages - only to get conversation_id
-      unsubscribeRef.current = websocketService.onMessage((data: any) => {
+      const unsubscribe = websocketService.onMessage((data: any) => {
         if (data.type === 'conversation_started') {
           // Immediately redirect to chat page with conversation_id
           console.log('✅ Conversation started, redirecting to:', data.conversation_id);
@@ -79,13 +79,10 @@ export default function Home() {
           // Mark that we're in streaming mode
           sessionStorage.setItem('is_streaming', 'true');
           
-          // IMPORTANT: Unsubscribe from homepage listener
+          // IMPORTANT: Unsubscribe from homepage listener BEFORE redirect
           // This allows the chat page to receive the streaming messages
-          if (unsubscribeRef.current) {
-            console.log('🔌 Unsubscribing homepage listener before redirect');
-            unsubscribeRef.current();
-            unsubscribeRef.current = null;
-          }
+          console.log('🔌 Unsubscribing homepage listener before redirect');
+          unsubscribe();
           
           // Redirect immediately - streaming will happen on chat page
           router.push(`/chat/${data.conversation_id}`);
@@ -96,8 +93,13 @@ export default function Home() {
           // Clear pending message on error
           sessionStorage.removeItem('pending_message');
           sessionStorage.removeItem('pending_query_type');
+          // Also unsubscribe on error
+          unsubscribe();
         }
       });
+      
+      // Store unsubscribe function for cleanup
+      unsubscribeRef.current = unsubscribe;
 
       // Send message via WebSocket
       await websocketService.sendMessage({
