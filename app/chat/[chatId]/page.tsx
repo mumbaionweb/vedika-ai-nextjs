@@ -27,6 +27,19 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     const pendingMessage = sessionStorage.getItem('pending_message');
     
     if (pendingMessage) {
+      // This is a new conversation - streaming will happen here
+      console.log('🆕 New conversation detected, setting up streaming...');
+      
+      // Create initial user message in UI
+      const userMsg: Message = {
+        message_id: 'temp-user',
+        role: 'user',
+        content: pendingMessage,
+        created_at: new Date().toISOString(),
+      };
+      setMessages([userMsg]);
+      setConversationTitle(pendingMessage.length > 50 ? pendingMessage.substring(0, 50) + '...' : pendingMessage);
+      
       // Clear the pending message
       sessionStorage.removeItem('pending_message');
       sessionStorage.removeItem('pending_query_type');
@@ -36,7 +49,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       setIsStreaming(true);
       setLoading(false);
     } else {
-      // Load existing conversation
+      // Load existing conversation from backend
       loadConversation();
     }
 
