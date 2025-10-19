@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { SidebarProps, User } from '@/types';
+import { apiService } from '@/lib/services/api';
+import type { Conversation } from '@/lib/types/api';
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter();
@@ -15,6 +17,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [activeOptionsMenu, setActiveOptionsMenu] = useState<string | null>(null);
+  const [chatHistory, setChatHistory] = useState<Conversation[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Close options menu when clicking outside
   useEffect(() => {
@@ -31,14 +35,51 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     };
   }, []);
 
-  // Mock chat history data - will be replaced with real data later
-  const chatHistory = [
-    { id: '1', title: 'Sales Analysis Report', date: '2 hours ago' },
-    { id: '2', title: 'Project Planning Discussion', date: 'Yesterday' },
-    { id: '3', title: 'Document Summarization', date: '2 days ago' },
-    { id: '4', title: 'Customer Support Query', date: '3 days ago' },
-    { id: '5', title: 'Financial Data Review', date: '1 week ago' },
-  ];
+  // Load chat history when hovering over Chat button
+  useEffect(() => {
+    if (showChatHistory && chatHistory.length === 0 && !loadingHistory) {
+      loadChatHistory();
+    }
+  }, [showChatHistory]);
+
+  async function loadChatHistory() {
+    setLoadingHistory(true);
+    try {
+      const result = await apiService.listConversations(5); // Load latest 5 conversations
+      
+      if (result.success) {
+        setChatHistory(result.data.conversations);
+        console.log('✅ Loaded chat history:', result.data.conversations.length, 'conversations');
+      } else {
+        console.error('Failed to load chat history:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  // Format timestamp for display
+  function formatTimestamp(timestamp: string): string {
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      
+      return date.toLocaleDateString();
+    } catch {
+      return timestamp;
+    }
+  }
 
   const handleNewChat = () => {
     router.push('/');
@@ -52,10 +93,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     router.push('/chat/history');
   };
 
-  const handleDeleteChat = (chatId: string) => {
-    // TODO: Implement delete functionality
-    console.log('Delete chat:', chatId);
-    setActiveOptionsMenu(null);
+  const handleDeleteChat = async (chatId: string) => {
+    try {
+      const result = await apiService.deleteConversation(chatId);
+      
+      if (result.success) {
+        // Remove from local state
+        setChatHistory(prev => prev.filter(chat => chat.conversation_id !== chatId));
+        console.log('✅ Chat deleted successfully');
+      } else {
+        console.error('Failed to delete chat:', result.error);
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+    } finally {
+      setActiveOptionsMenu(null);
+    }
   };
 
   return (
@@ -161,27 +214,37 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                 {/* Chat History List */}
                 <div className="py-0 max-h-64 overflow-y-auto">
-                  {chatHistory.map((chat) => (
-                    <div
-                      key={chat.id}
-                      className="relative group/item px-3 py-1.5 hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent transition-all cursor-pointer border-l-2 border-transparent hover:border-primary-400"
-                      onClick={() => handleChatClick(chat.id)}
-                    >
-                      <div className="pr-5">
-                        <p className="text-xs font-medium text-secondary-900 truncate leading-tight">{chat.title}</p>
-                        <p className="text-[10px] text-secondary-400 mt-0.5 leading-none">{chat.date}</p>
-                      </div>
-
-                      {/* Three Dots Menu */}
-                      <button
-                        data-three-dots
-                        className="absolute right-1 top-1.5 p-0.5 rounded hover:bg-white opacity-0 group-hover/item:opacity-100 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveOptionsMenu(activeOptionsMenu === chat.id ? null : chat.id);
-                        }}
-                        aria-label="Chat options"
+                  {loadingHistory ? (
+                    <div className="px-3 py-4 text-center">
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                      <p className="text-[10px] text-secondary-400 mt-2">Loading...</p>
+                    </div>
+                  ) : chatHistory.length === 0 ? (
+                    <div className="px-3 py-4 text-center">
+                      <p className="text-[10px] text-secondary-400">No conversations yet</p>
+                    </div>
+                  ) : (
+                    chatHistory.map((chat) => (
+                      <div
+                        key={chat.conversation_id}
+                        className="relative group/item px-3 py-1.5 hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent transition-all cursor-pointer border-l-2 border-transparent hover:border-primary-400"
+                        onClick={() => handleChatClick(chat.conversation_id)}
                       >
+                        <div className="pr-5">
+                          <p className="text-xs font-medium text-secondary-900 truncate leading-tight">{chat.title || chat.topic || 'Untitled'}</p>
+                          <p className="text-[10px] text-secondary-400 mt-0.5 leading-none">{formatTimestamp(chat.created_at)}</p>
+                        </div>
+
+                        {/* Three Dots Menu */}
+                        <button
+                          data-three-dots
+                          className="absolute right-1 top-1.5 p-0.5 rounded hover:bg-white opacity-0 group-hover/item:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveOptionsMenu(activeOptionsMenu === chat.conversation_id ? null : chat.conversation_id);
+                          }}
+                          aria-label="Chat options"
+                        >
                           <svg
                             className="w-3.5 h-3.5 text-secondary-400 hover:text-secondary-600"
                             fill="currentColor"
@@ -192,7 +255,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </button>
 
                         {/* Options Submenu - Slides out from three dots */}
-                        {activeOptionsMenu === chat.id && (
+                        {activeOptionsMenu === chat.conversation_id && (
                           <div 
                             data-options-menu
                             className="absolute right-0 top-full mt-1 bg-white rounded-md shadow-xl border border-gray-200 py-1 z-30 min-w-[100px]"
@@ -202,7 +265,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                               className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteChat(chat.id);
+                                handleDeleteChat(chat.conversation_id);
                               }}
                             >
                               <svg
@@ -222,8 +285,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             </button>
                           </div>
                         )}
-                    </div>
-                  ))}
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 {/* View All Link */}
