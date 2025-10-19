@@ -6,7 +6,7 @@ export default function Home() {
       <div className="text-center space-y-8 p-8 max-w-4xl mx-auto w-full">
         {/* V.ai Logo */}
         <div className="mb-12">
-          <VaiLogo width={180} height={60} className="drop-shadow-lg" />
+          <VaiLogo width={160} height={48} className="drop-shadow-lg" />
         </div>
 
         {/* Chat Box */}
