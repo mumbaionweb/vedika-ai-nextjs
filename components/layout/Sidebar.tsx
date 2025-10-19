@@ -1,14 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { SidebarProps, User } from '@/types';
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const router = useRouter();
+  
   // Mock user data - will be replaced with real authentication later
   const [user] = useState<User>({
     isGuest: true,
     name: 'Guest User',
   });
+
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const [activeOptionsMenu, setActiveOptionsMenu] = useState<string | null>(null);
+
+  // Close options menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-options-menu]') && !target.closest('[data-three-dots]')) {
+        setActiveOptionsMenu(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  // Mock chat history data - will be replaced with real data later
+  const chatHistory = [
+    { id: '1', title: 'Sales Analysis Report', date: '2 hours ago' },
+    { id: '2', title: 'Project Planning Discussion', date: 'Yesterday' },
+    { id: '3', title: 'Document Summarization', date: '2 days ago' },
+    { id: '4', title: 'Customer Support Query', date: '3 days ago' },
+    { id: '5', title: 'Financial Data Review', date: '1 week ago' },
+  ];
+
+  const handleNewChat = () => {
+    router.push('/');
+  };
+
+  const handleChatClick = (chatId: string) => {
+    router.push(`/chat/${chatId}`);
+  };
+
+  const handleViewAll = () => {
+    router.push('/chat/history');
+  };
+
+  const handleDeleteChat = (chatId: string) => {
+    // TODO: Implement delete functionality
+    console.log('Delete chat:', chatId);
+    setActiveOptionsMenu(null);
+  };
 
   return (
     <>
@@ -37,7 +85,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         `}
       >
         {/* Top Section - Logo & New Chat */}
-        <div className="p-4 border-b border-primary-300">
+        <div className="p-4">
           {/* Logo */}
           <div className="flex items-center justify-center mb-6">
             <div className="text-xl font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 text-transparent bg-clip-text drop-shadow-lg">
@@ -47,7 +95,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* New Chat Button */}
           <button 
-            className="w-7 h-7 mx-auto mt-8 flex items-center justify-center p-1 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
+            onClick={handleNewChat}
+            className="w-7 h-7 mx-auto mt-16 flex items-center justify-center p-1 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
             aria-label="New Chat"
             title="New Chat"
           >
@@ -65,6 +114,130 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               />
             </svg>
           </button>
+
+          {/* Chat Button with Submenu */}
+          <div 
+            className="relative"
+            onMouseEnter={() => {
+              console.log('🖱️ Mouse entered chat button area');
+              setShowChatHistory(true);
+            }}
+            onMouseLeave={() => {
+              console.log('🖱️ Mouse left chat button area');
+              setShowChatHistory(false);
+              setActiveOptionsMenu(null); // Close options menu when leaving submenu
+            }}
+          >
+            <button 
+              className="w-7 h-7 mx-auto mt-4 flex items-center justify-center p-1 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
+              aria-label="Chat"
+              title="Chat"
+            >
+              <svg
+                className="w-6 h-6 text-primary-400 group-hover:text-primary-300 transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
+            </button>
+
+            {/* Chat History Submenu - Ultra Sleek Design */}
+            {(() => {
+              console.log('🔍 Checking showChatHistory:', showChatHistory);
+              return showChatHistory;
+            })() && (
+              <div className="absolute left-full top-0 -ml-1 w-56 bg-white rounded-lg shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                {/* Submenu Header */}
+                <div className="px-3 py-1.5 bg-gradient-to-r from-primary-50 to-white border-b border-gray-100">
+                  <h3 className="text-[10px] font-semibold text-secondary-600 uppercase tracking-wider">History</h3>
+                </div>
+
+                {/* Chat History List */}
+                <div className="py-0 max-h-64 overflow-y-auto">
+                  {chatHistory.map((chat) => (
+                    <div
+                      key={chat.id}
+                      className="relative group/item px-3 py-1.5 hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent transition-all cursor-pointer border-l-2 border-transparent hover:border-primary-400"
+                      onClick={() => handleChatClick(chat.id)}
+                    >
+                      <div className="pr-5">
+                        <p className="text-xs font-medium text-secondary-900 truncate leading-tight">{chat.title}</p>
+                        <p className="text-[10px] text-secondary-400 mt-0.5 leading-none">{chat.date}</p>
+                      </div>
+
+                      {/* Three Dots Menu */}
+                      <button
+                        data-three-dots
+                        className="absolute right-1 top-1.5 p-0.5 rounded hover:bg-white opacity-0 group-hover/item:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveOptionsMenu(activeOptionsMenu === chat.id ? null : chat.id);
+                        }}
+                        aria-label="Chat options"
+                      >
+                          <svg
+                            className="w-3.5 h-3.5 text-secondary-400 hover:text-secondary-600"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                          </svg>
+                        </button>
+
+                        {/* Options Submenu - Slides out from three dots */}
+                        {activeOptionsMenu === chat.id && (
+                          <div 
+                            data-options-menu
+                            className="absolute right-0 top-full mt-1 bg-white rounded-md shadow-xl border border-gray-200 py-1 z-30 min-w-[100px]"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteChat(chat.id);
+                              }}
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* View All Link */}
+                <div className="border-t border-gray-100 px-3 py-1.5 bg-gray-50">
+                  <button
+                    onClick={handleViewAll}
+                    className="text-[10px] font-semibold text-primary-600 hover:text-primary-700 transition-colors uppercase tracking-wider"
+                  >
+                    View All →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Middle Section - Navigation/Chat History */}
