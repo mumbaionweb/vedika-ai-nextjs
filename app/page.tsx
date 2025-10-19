@@ -79,6 +79,14 @@ export default function Home() {
           // Mark that we're in streaming mode
           sessionStorage.setItem('is_streaming', 'true');
           
+          // IMPORTANT: Unsubscribe from homepage listener
+          // This allows the chat page to receive the streaming messages
+          if (unsubscribeRef.current) {
+            console.log('🔌 Unsubscribing homepage listener before redirect');
+            unsubscribeRef.current();
+            unsubscribeRef.current = null;
+          }
+          
           // Redirect immediately - streaming will happen on chat page
           router.push(`/chat/${data.conversation_id}`);
         } else if (data.type === 'error') {
