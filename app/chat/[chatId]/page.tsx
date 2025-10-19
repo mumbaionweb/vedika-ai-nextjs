@@ -21,14 +21,16 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const hasSetupStreamingRef = useRef(false); // Prevent double setup in Strict Mode
 
   useEffect(() => {
     // Check if this is a new conversation with streaming in progress
     const pendingMessage = sessionStorage.getItem('pending_message');
     
-    if (pendingMessage) {
+    if (pendingMessage && !hasSetupStreamingRef.current) {
       // This is a new conversation - streaming will happen here
       console.log('🆕 New conversation detected, setting up streaming...');
+      hasSetupStreamingRef.current = true; // Mark as setup to prevent double runs
       
       // Create initial user message in UI
       const userMsg: Message = {
@@ -40,25 +42,29 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       setMessages([userMsg]);
       setConversationTitle(pendingMessage.length > 50 ? pendingMessage.substring(0, 50) + '...' : pendingMessage);
       
-      // Clear the pending message
+      // Clear the pending message AFTER reading it
       sessionStorage.removeItem('pending_message');
       sessionStorage.removeItem('pending_query_type');
       
       // Set up streaming listener
-      setupStreamingListener();
+      const unsubscribe = setupStreamingListener();
       setIsStreaming(true);
       setLoading(false);
-      // Do NOT call loadConversation() - wait for streaming to complete
-    } else {
-      // Load existing conversation from backend
+      
+      // Return cleanup function
+      return () => {
+        console.log('🧹 Cleaning up chat page streaming listener');
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    } else if (!pendingMessage) {
+      // Load existing conversation from backend (only if not streaming)
       loadConversation();
+      
+      // No cleanup needed for API call
+      return undefined;
     }
-
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-    };
   }, [chatId]);
 
   // Auto-scroll to the latest message when messages load or update
@@ -78,7 +84,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   function setupStreamingListener() {
     console.log('🎧 Setting up streaming listener for chat page...');
     
-    unsubscribeRef.current = websocketService.onMessage((data: any) => {
+    const unsubscribe = websocketService.onMessage((data: any) => {
       console.log('📨 Chat page received:', data);
 
       if (data.type === 'conversation_started') {
@@ -104,6 +110,12 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         setIsStreaming(false);
       }
     });
+    
+    // Store for potential cleanup
+    unsubscribeRef.current = unsubscribe;
+    
+    // Return the unsubscribe function
+    return unsubscribe;
   }
 
   async function loadConversation() {
