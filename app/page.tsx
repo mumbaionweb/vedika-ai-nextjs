@@ -79,13 +79,13 @@ export default function Home() {
             <p className="text-sm text-secondary-500 mb-3">Try asking:</p>
             <div className="flex gap-3 justify-center flex-wrap">
               <button className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200">
-                "Help me analyze sales data"
+                &ldquo;Help me analyze sales data&rdquo;
               </button>
               <button className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200">
-                "Create a project plan"
+                &ldquo;Create a project plan&rdquo;
               </button>
               <button className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200">
-                "Summarize this document"
+                &ldquo;Summarize this document&rdquo;
               </button>
             </div>
           </div>

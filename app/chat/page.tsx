@@ -24,7 +24,7 @@ export default function ChatPage() {
             </div>
             <div className="flex-1 bg-primary-50 rounded-lg p-3 border border-primary-200">
               <p className="text-secondary-900">
-                Hello! I'm Vedika AI, your enterprise AI assistant. I can help you with:
+                Hello! I&apos;m Vedika AI, your enterprise AI assistant. I can help you with:
               </p>
               <ul className="list-disc list-inside mt-2 space-y-1 text-secondary-700">
                 <li>Answering questions about your business data</li>
