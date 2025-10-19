@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="p-4 border-b border-primary-300">
           {/* Logo */}
           <div className="flex items-center justify-center mb-6">
-            <VaiLogo width={80} height={24} className="drop-shadow-lg" />
+            <VaiLogo width={100} height={32} className="drop-shadow-lg" />
           </div>
 
           {/* New Chat Button */}

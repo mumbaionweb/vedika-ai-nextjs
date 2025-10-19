@@ -11,7 +11,7 @@ export default function VaiLogo({ className = '', width = 120, height = 40 }: Va
     <svg 
       width={width} 
       height={height} 
-      viewBox="0 0 120 40" 
+      viewBox="0 0 60 24" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
       className={className}
@@ -27,11 +27,11 @@ export default function VaiLogo({ className = '', width = 120, height = 40 }: Va
       
       {/* Main V */}
       <text 
-        x="10" 
-        y="28" 
+        x="2" 
+        y="18" 
         fontFamily="Inter, sans-serif"
         fontWeight="800" 
-        fontSize="24" 
+        fontSize="20" 
         fill="url(#goldGradient)"
         dominantBaseline="middle"
       >
@@ -40,11 +40,11 @@ export default function VaiLogo({ className = '', width = 120, height = 40 }: Va
 
       {/* .ai */}
       <text 
-        x="40" 
-        y="28" 
+        x="22" 
+        y="18" 
         fontFamily="Inter, sans-serif"
         fontWeight="600" 
-        fontSize="16" 
+        fontSize="14" 
         fill="url(#goldGradient)"
         dominantBaseline="middle"
       >
