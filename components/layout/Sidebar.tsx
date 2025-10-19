@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import type { SidebarProps, User } from '@/types';
-import VaiLogo from '@/components/ui/VaiLogo';
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Mock user data - will be replaced with real authentication later
@@ -41,12 +40,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="p-4 border-b border-primary-300">
           {/* Logo */}
           <div className="flex items-center justify-center mb-6">
-            <VaiLogo width={100} height={32} className="drop-shadow-lg" />
+            <div className="text-xl font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 text-transparent bg-clip-text drop-shadow-lg">
+              V.ai
+            </div>
           </div>
 
           {/* New Chat Button */}
           <button 
-            className="w-full flex items-center justify-center p-3 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
+            className="w-full h-12 flex items-center justify-center p-3 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
             aria-label="New Chat"
             title="New Chat"
           >

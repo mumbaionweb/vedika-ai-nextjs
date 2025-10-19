@@ -1,12 +1,12 @@
-import VaiLogo from '@/components/ui/VaiLogo';
-
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center h-full bg-white">
       <div className="text-center space-y-8 p-8 max-w-4xl mx-auto w-full">
         {/* V.ai Logo */}
         <div className="mb-12">
-          <VaiLogo width={160} height={48} className="drop-shadow-lg" />
+          <h1 className="text-6xl font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 text-transparent bg-clip-text drop-shadow-lg">
+            V.ai
+          </h1>
         </div>
 
         {/* Chat Box */}
