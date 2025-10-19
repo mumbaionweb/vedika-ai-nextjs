@@ -48,6 +48,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       setupStreamingListener();
       setIsStreaming(true);
       setLoading(false);
+      // Do NOT call loadConversation() - wait for streaming to complete
     } else {
       // Load existing conversation from backend
       loadConversation();
@@ -99,6 +100,12 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   }
 
   async function loadConversation() {
+    // Don't try to load if we're currently streaming
+    if (isStreaming) {
+      console.log('⏸️ Skipping API load - streaming in progress');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -117,10 +124,16 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           setConversationTitle(title);
         }
       } else {
-        setError(result.error.message);
+        // Only show error if we're not streaming (to avoid showing errors during new conversation creation)
+        if (!isStreaming) {
+          setError(result.error.message);
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load conversation');
+      // Only show error if we're not streaming
+      if (!isStreaming) {
+        setError(err instanceof Error ? err.message : 'Failed to load conversation');
+      }
     } finally {
       setLoading(false);
     }
@@ -147,7 +160,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     }
   }
 
-  if (loading) {
+  // Show loading only if not streaming and loading
+  if (loading && !isStreaming) {
     return (
       <div className="p-6 h-full">
         <div className="max-w-4xl mx-auto">
@@ -162,7 +176,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     );
   }
 
-  if (error) {
+  // Show error only if not streaming
+  if (error && !isStreaming) {
     return (
       <div className="p-6 h-full">
         <div className="max-w-4xl mx-auto">

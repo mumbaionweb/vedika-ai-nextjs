@@ -66,15 +66,18 @@ export default function Home() {
       // Connect to WebSocket
       await websocketService.connect();
 
+      // Store the message BEFORE sending, so chat page can detect it immediately
+      sessionStorage.setItem('pending_message', message);
+      sessionStorage.setItem('pending_query_type', queryTypeMap[selectedAgent as keyof typeof queryTypeMap]);
+      
       // Subscribe to messages - only to get conversation_id
       unsubscribeRef.current = websocketService.onMessage((data: any) => {
         if (data.type === 'conversation_started') {
           // Immediately redirect to chat page with conversation_id
           console.log('✅ Conversation started, redirecting to:', data.conversation_id);
           
-          // Store the message and query type for the chat page to use
-          sessionStorage.setItem('pending_message', message);
-          sessionStorage.setItem('pending_query_type', queryTypeMap[selectedAgent as keyof typeof queryTypeMap]);
+          // Mark that we're in streaming mode
+          sessionStorage.setItem('is_streaming', 'true');
           
           // Redirect immediately - streaming will happen on chat page
           router.push(`/chat/${data.conversation_id}`);
@@ -82,6 +85,9 @@ export default function Home() {
           console.error('❌ Error:', data.error || data.message);
           setError(data.error || data.message || 'An error occurred');
           setIsSubmitting(false);
+          // Clear pending message on error
+          sessionStorage.removeItem('pending_message');
+          sessionStorage.removeItem('pending_query_type');
         }
       });
 
