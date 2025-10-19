@@ -76,21 +76,28 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   }, [messages, streamingContent]);
 
   function setupStreamingListener() {
+    console.log('🎧 Setting up streaming listener for chat page...');
+    
     unsubscribeRef.current = websocketService.onMessage((data: any) => {
       console.log('📨 Chat page received:', data);
 
-      if (data.type === 'stream_start') {
+      if (data.type === 'conversation_started') {
+        console.log('📝 Conversation started (already redirected)');
+      } else if (data.type === 'stream_start') {
         console.log('▶️ Stream started');
         setStreamingContent('');
       } else if (data.type === 'content_chunk') {
+        console.log('📝 Adding chunk:', data.content);
         setStreamingContent(prev => prev + data.content);
       } else if (data.type === 'stream_complete') {
-        console.log('✅ Streaming complete, loading conversation...');
+        console.log('✅ Streaming complete, loading full conversation...');
         setIsStreaming(false);
         setStreamingContent('');
         
-        // Load the complete conversation from backend
-        loadConversation();
+        // Wait a bit before loading to ensure backend has saved everything
+        setTimeout(() => {
+          loadConversation();
+        }, 500);
       } else if (data.type === 'error') {
         console.error('❌ Streaming error:', data.error || data.message);
         setError(data.error || data.message || 'An error occurred');
@@ -253,19 +260,28 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           ))}
           
           {/* Streaming Response */}
-          {isStreaming && streamingContent && (
-            <div className="flex gap-3">
+          {isStreaming && (
+            <div key="streaming-message" className="flex gap-3">
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-xs bg-gradient-to-br from-primary-500 to-primary-700">
                 AI
               </div>
               <div className="flex-1 rounded-lg p-3 bg-primary-50 border border-primary-200">
-                <p className="text-secondary-900 whitespace-pre-line">
-                  {streamingContent}
-                  <span className="inline-block w-2 h-4 bg-primary-600 animate-pulse ml-1"></span>
-                </p>
-                <p className="text-xs text-secondary-400 mt-2">
-                  Streaming...
-                </p>
+                {streamingContent ? (
+                  <>
+                    <p className="text-secondary-900 whitespace-pre-line">
+                      {streamingContent}
+                      <span className="inline-block w-2 h-4 bg-primary-600 animate-pulse ml-1"></span>
+                    </p>
+                    <p className="text-xs text-secondary-400 mt-2">
+                      Streaming...
+                    </p>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 text-secondary-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                    <p className="text-sm">Waiting for response...</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
