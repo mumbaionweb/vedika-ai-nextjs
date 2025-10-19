@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { SidebarProps, User } from '@/types';
 import { apiService } from '@/lib/services/api';
@@ -19,6 +19,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeOptionsMenu, setActiveOptionsMenu] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<Conversation[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const loadChatHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const result = await apiService.listConversations(5); // Load latest 5 conversations
+      
+      if (result.success) {
+        setChatHistory(result.data.conversations);
+        console.log('✅ Loaded chat history:', result.data.conversations.length, 'conversations');
+      } else {
+        console.error('Failed to load chat history:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
 
   // Close options menu when clicking outside
   useEffect(() => {
@@ -40,25 +58,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (showChatHistory && chatHistory.length === 0 && !loadingHistory) {
       loadChatHistory();
     }
-  }, [showChatHistory]);
-
-  async function loadChatHistory() {
-    setLoadingHistory(true);
-    try {
-      const result = await apiService.listConversations(5); // Load latest 5 conversations
-      
-      if (result.success) {
-        setChatHistory(result.data.conversations);
-        console.log('✅ Loaded chat history:', result.data.conversations.length, 'conversations');
-      } else {
-        console.error('Failed to load chat history:', result.error);
-      }
-    } catch (error) {
-      console.error('Error loading chat history:', error);
-    } finally {
-      setLoadingHistory(false);
-    }
-  }
+  }, [showChatHistory, chatHistory.length, loadingHistory, loadChatHistory]);
 
   // Format timestamp with relative time display
   function formatTimestamp(timestamp: string): string {

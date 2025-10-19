@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiService } from '@/lib/services/api';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import type { Message } from '@/lib/types/api';
@@ -22,6 +22,115 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasSetupStreamingRef = useRef(false); // Prevent double setup in Strict Mode
+
+  const loadConversation = useCallback(async () => {
+    // Don't try to load if we're currently streaming
+    if (isStreaming) {
+      console.log('⏸️ Skipping API load - streaming in progress');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await apiService.getConversation(chatId);
+
+      if (result.success) {
+        setMessages(result.data.messages);
+        
+        // Set title from first user message
+        const firstUserMessage = result.data.messages.find(m => m.role === 'user');
+        if (firstUserMessage) {
+          const title = firstUserMessage.content.length > 50 
+            ? firstUserMessage.content.substring(0, 50) + '...'
+            : firstUserMessage.content;
+          setConversationTitle(title);
+        }
+      } else {
+        // Only show error if we're not streaming (to avoid showing errors during new conversation creation)
+        if (!isStreaming) {
+          setError(result.error.message);
+        }
+      }
+    } catch (err) {
+      // Only show error if we're not streaming
+      if (!isStreaming) {
+        setError(err instanceof Error ? err.message : 'Failed to load conversation');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [chatId, isStreaming]);
+
+  // OPTIMIZATION: Load conversation with optimistic message (for follow-ups)
+  const loadConversationWithOptimisticMessage = useCallback(async (optimisticMsg: any) => {
+    console.log('⚡ Loading conversation with optimistic message (parallel)...');
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch conversation from backend
+      const result = await apiService.getConversation(chatId);
+
+      if (result.success) {
+        // Add existing messages + optimistic message
+        const allMessages = [...result.data.messages, optimisticMsg];
+        setMessages(allMessages);
+        
+        console.log('✅ Loaded conversation + optimistic message:', allMessages.length, 'total messages');
+        
+        // Set title from first user message
+        const firstUserMessage = result.data.messages.find(m => m.role === 'user');
+        if (firstUserMessage) {
+          const title = firstUserMessage.content.length > 50 
+            ? firstUserMessage.content.substring(0, 50) + '...'
+            : firstUserMessage.content;
+          setConversationTitle(title);
+        }
+      } else {
+        // On error, still show optimistic message
+        setMessages([optimisticMsg]);
+        console.warn('⚠️ Failed to load conversation, showing optimistic message only');
+      }
+    } catch (err) {
+      // On error, still show optimistic message
+      setMessages([optimisticMsg]);
+      console.error('❌ Error loading conversation:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [chatId]);
+
+  const setupStreamingListener = useCallback(() => {
+    console.log('🎧 Setting up streaming listener for chat page...');
+    
+    const unsubscribe = subscribe((data: any) => {
+      console.log('📨 Chat page received:', data);
+      
+      if (data.type === 'stream_start') {
+        setStreamingContent('');
+        setIsStreaming(true);
+      } else if (data.type === 'stream_chunk') {
+        setStreamingContent(prev => prev + (data.content || ''));
+      } else if (data.type === 'stream_complete') {
+        console.log('✅ Stream complete, reloading conversation...');
+        setIsStreaming(false);
+        setStreamingContent('');
+        // Reload the conversation to get the final messages
+        setTimeout(() => {
+          loadConversation();
+        }, 500);
+      } else if (data.type === 'stream_error') {
+        console.error('❌ Streaming error:', data.error || data.message);
+        setError(data.error || data.message || 'An error occurred');
+        setIsStreaming(false);
+      }
+    });
+    
+    // Return the unsubscribe function
+    return unsubscribe;
+  }, [subscribe, loadConversation]);
 
   useEffect(() => {
     // Check if this is a new conversation with streaming in progress
@@ -92,7 +201,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       // No cleanup needed for API call
       return undefined;
     }
-  }, [chatId]);
+  }, [chatId, loadConversation, loadConversationWithOptimisticMessage, setupStreamingListener]);
 
   // Auto-scroll to the latest message when messages load or update
   useEffect(() => {
@@ -107,119 +216,6 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       }, 100);
     }
   }, [messages, streamingContent]);
-
-  function setupStreamingListener() {
-    console.log('🎧 Setting up streaming listener for chat page...');
-    
-    const unsubscribe = subscribe((data: any) => {
-      console.log('📨 Chat page received:', data);
-
-      if (data.type === 'conversation_started') {
-        console.log('📝 Conversation started (already redirected)');
-      } else if (data.type === 'stream_start') {
-        console.log('▶️ Stream started');
-        setStreamingContent('');
-      } else if (data.type === 'content_chunk') {
-        console.log('📝 Adding chunk:', data.content);
-        setStreamingContent(prev => prev + data.content);
-      } else if (data.type === 'stream_complete') {
-        console.log('✅ Streaming complete, loading full conversation...');
-        setIsStreaming(false);
-        setStreamingContent('');
-        
-        // Wait a bit before loading to ensure backend has saved everything
-        setTimeout(() => {
-          loadConversation();
-        }, 500);
-      } else if (data.type === 'error') {
-        console.error('❌ Streaming error:', data.error || data.message);
-        setError(data.error || data.message || 'An error occurred');
-        setIsStreaming(false);
-      }
-    });
-    
-    // Return the unsubscribe function
-    return unsubscribe;
-  }
-
-  async function loadConversation() {
-    // Don't try to load if we're currently streaming
-    if (isStreaming) {
-      console.log('⏸️ Skipping API load - streaming in progress');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await apiService.getConversation(chatId);
-
-      if (result.success) {
-        setMessages(result.data.messages);
-        
-        // Set title from first user message
-        const firstUserMessage = result.data.messages.find(m => m.role === 'user');
-        if (firstUserMessage) {
-          const title = firstUserMessage.content.length > 50 
-            ? firstUserMessage.content.substring(0, 50) + '...'
-            : firstUserMessage.content;
-          setConversationTitle(title);
-        }
-      } else {
-        // Only show error if we're not streaming (to avoid showing errors during new conversation creation)
-        if (!isStreaming) {
-          setError(result.error.message);
-        }
-      }
-    } catch (err) {
-      // Only show error if we're not streaming
-      if (!isStreaming) {
-        setError(err instanceof Error ? err.message : 'Failed to load conversation');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // OPTIMIZATION: Load conversation with optimistic message (for follow-ups)
-  async function loadConversationWithOptimisticMessage(optimisticMsg: any) {
-    console.log('⚡ Loading conversation with optimistic message (parallel)...');
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Fetch conversation from backend
-      const result = await apiService.getConversation(chatId);
-
-      if (result.success) {
-        // Add existing messages + optimistic message
-        const allMessages = [...result.data.messages, optimisticMsg];
-        setMessages(allMessages);
-        
-        console.log('✅ Loaded conversation + optimistic message:', allMessages.length, 'total messages');
-        
-        // Set title from first user message
-        const firstUserMessage = result.data.messages.find(m => m.role === 'user');
-        if (firstUserMessage) {
-          const title = firstUserMessage.content.length > 50 
-            ? firstUserMessage.content.substring(0, 50) + '...'
-            : firstUserMessage.content;
-          setConversationTitle(title);
-        }
-      } else {
-        // On error, still show optimistic message
-        setMessages([optimisticMsg]);
-        console.warn('⚠️ Failed to load conversation, showing optimistic message only');
-      }
-    } catch (err) {
-      // On error, still show optimistic message
-      setMessages([optimisticMsg]);
-      console.error('❌ Error loading conversation:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   // Format timestamp with relative time display
   function formatTimestamp(timestamp: string): string {

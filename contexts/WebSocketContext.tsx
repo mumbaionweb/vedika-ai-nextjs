@@ -17,12 +17,22 @@ interface WebSocketMessage {
 
 type MessageHandler = (message: WebSocketMessage) => void;
 
+// Connection state constants
+export const CONNECTION_STATE = {
+  CONNECTING: 0,
+  OPEN: 1,
+  CLOSING: 2,
+  CLOSED: 3,
+} as const;
+
+type ConnectionState = typeof CONNECTION_STATE[keyof typeof CONNECTION_STATE];
+
 interface WebSocketContextType {
   send: (message: any) => Promise<void>;
   subscribe: (handler: MessageHandler) => () => void;
   isConnected: boolean;
   reconnecting: boolean;
-  connectionState: number;
+  connectionState: ConnectionState;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -44,7 +54,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const [isConnected, setIsConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
-  const [connectionState, setConnectionState] = useState(WebSocket.CLOSED);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(CONNECTION_STATE.CLOSED);
   
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -57,13 +67,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       console.log(`🔌 Connecting to WebSocket (attempt ${attempt}/${MAX_RECONNECT_ATTEMPTS})...`, WS_URL);
       
       wsRef.current = new WebSocket(WS_URL);
-      setConnectionState(WebSocket.CONNECTING);
+      setConnectionState(CONNECTION_STATE.CONNECTING);
       
       wsRef.current.onopen = () => {
         console.log('✅ WebSocket connected successfully');
         setIsConnected(true);
         setReconnecting(false);
-        setConnectionState(WebSocket.OPEN);
+        setConnectionState(CONNECTION_STATE.OPEN);
         reconnectAttemptsRef.current = 0; // Reset counter on successful connection
       };
       
@@ -92,13 +102,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       wsRef.current.onerror = (error) => {
         console.error('❌ WebSocket error:', error);
         setIsConnected(false);
-        setConnectionState(WebSocket.CLOSED);
+        setConnectionState(CONNECTION_STATE.CLOSED);
       };
       
       wsRef.current.onclose = (event) => {
         console.log(`🔌 WebSocket disconnected: code=${event.code}, reason="${event.reason}"`);
         setIsConnected(false);
-        setConnectionState(WebSocket.CLOSED);
+        setConnectionState(CONNECTION_STATE.CLOSED);
         
         // Don't reconnect if intentional close (code 1000)
         if (event.code === 1000) {
