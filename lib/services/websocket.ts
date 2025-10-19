@@ -78,9 +78,18 @@ export class WebSocketService {
           try {
             const data = JSON.parse(event.data);
             console.log('📨 WebSocket message:', data);
+            console.log('👥 Notifying', this.messageHandlers.size, 'handler(s)');
             
             // Notify all handlers
-            this.messageHandlers.forEach(handler => handler(data));
+            let handlerIndex = 0;
+            this.messageHandlers.forEach(handler => {
+              console.log(`  ↳ Calling handler #${++handlerIndex}`);
+              try {
+                handler(data);
+              } catch (error) {
+                console.error(`  ❌ Handler #${handlerIndex} error:`, error);
+              }
+            });
           } catch (error) {
             console.error('❌ Failed to parse WebSocket message:', error);
           }
