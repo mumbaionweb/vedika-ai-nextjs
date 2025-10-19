@@ -13,8 +13,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
-  const [streamingResponse, setStreamingResponse] = useState('');
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Initialize device session on mount
@@ -56,8 +54,6 @@ export default function Home() {
 
     setIsSubmitting(true);
     setError(null);
-    setStreamingResponse('');
-    setConversationId(null);
 
     // Map agent selection to query type
     const queryTypeMap = {
@@ -70,36 +66,20 @@ export default function Home() {
       // Connect to WebSocket
       await websocketService.connect();
 
-      // Subscribe to messages
+      // Subscribe to messages - only to get conversation_id
       unsubscribeRef.current = websocketService.onMessage((data: any) => {
-        console.log('📨 Received chunk:', data);
-
         if (data.type === 'conversation_started') {
-          // Store conversation ID when conversation starts
-          setConversationId(data.conversation_id);
-        } else if (data.type === 'stream_start') {
-          // Stream is starting
-          console.log('▶️ Stream started');
-        } else if (data.type === 'content_chunk') {
-          // Append content chunk to streaming response
-          setStreamingResponse(prev => prev + data.content);
-        } else if (data.type === 'stream_complete') {
-          console.log('✅ Streaming complete');
-          setIsSubmitting(false);
+          // Immediately redirect to chat page with conversation_id
+          console.log('✅ Conversation started, redirecting to:', data.conversation_id);
           
-          // Update credits if provided
-          if (data.credits?.remaining !== undefined) {
-            setCredits(data.credits.remaining);
-          }
-
-          // Redirect after a brief delay to show complete response
-          if (conversationId) {
-            setTimeout(() => {
-              router.push(`/chat/${conversationId}`);
-            }, 1500);
-          }
+          // Store the message and query type for the chat page to use
+          sessionStorage.setItem('pending_message', message);
+          sessionStorage.setItem('pending_query_type', queryTypeMap[selectedAgent as keyof typeof queryTypeMap]);
+          
+          // Redirect immediately - streaming will happen on chat page
+          router.push(`/chat/${data.conversation_id}`);
         } else if (data.type === 'error') {
-          console.error('❌ Streaming error:', data.error || data.message);
+          console.error('❌ Error:', data.error || data.message);
           setError(data.error || data.message || 'An error occurred');
           setIsSubmitting(false);
         }
@@ -170,16 +150,6 @@ export default function Home() {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
                 </svg>
                 {error}
-              </p>
-            </div>
-          )}
-
-          {/* Streaming Response Preview */}
-          {streamingResponse && (
-            <div className="mb-4 p-4 bg-primary-50 border border-primary-200 rounded-lg">
-              <p className="text-secondary-700 text-sm whitespace-pre-wrap">
-                {streamingResponse}
-                <span className="inline-block w-2 h-4 bg-primary-600 animate-pulse ml-1"></span>
               </p>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { apiService } from '@/lib/services/api';
+import { websocketService } from '@/lib/services/websocket';
 import type { Message } from '@/lib/types/api';
 
 interface ChatPageProps {
@@ -16,15 +17,39 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [conversationTitle, setConversationTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    loadConversation();
+    // Check if this is a new conversation with streaming in progress
+    const pendingMessage = sessionStorage.getItem('pending_message');
+    
+    if (pendingMessage) {
+      // Clear the pending message
+      sessionStorage.removeItem('pending_message');
+      sessionStorage.removeItem('pending_query_type');
+      
+      // Set up streaming listener
+      setupStreamingListener();
+      setIsStreaming(true);
+      setLoading(false);
+    } else {
+      // Load existing conversation
+      loadConversation();
+    }
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
   }, [chatId]);
 
   // Auto-scroll to the latest message when messages load or update
   useEffect(() => {
-    if (messages.length > 0 && messagesEndRef.current) {
+    if ((messages.length > 0 || streamingContent) && messagesEndRef.current) {
       // Use setTimeout to ensure the DOM has been updated
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ 
@@ -34,7 +59,31 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         });
       }, 100);
     }
-  }, [messages]);
+  }, [messages, streamingContent]);
+
+  function setupStreamingListener() {
+    unsubscribeRef.current = websocketService.onMessage((data: any) => {
+      console.log('📨 Chat page received:', data);
+
+      if (data.type === 'stream_start') {
+        console.log('▶️ Stream started');
+        setStreamingContent('');
+      } else if (data.type === 'content_chunk') {
+        setStreamingContent(prev => prev + data.content);
+      } else if (data.type === 'stream_complete') {
+        console.log('✅ Streaming complete, loading conversation...');
+        setIsStreaming(false);
+        setStreamingContent('');
+        
+        // Load the complete conversation from backend
+        loadConversation();
+      } else if (data.type === 'error') {
+        console.error('❌ Streaming error:', data.error || data.message);
+        setError(data.error || data.message || 'An error occurred');
+        setIsStreaming(false);
+      }
+    });
+  }
 
   async function loadConversation() {
     setLoading(true);
@@ -174,6 +223,25 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
               </div>
             </div>
           ))}
+          
+          {/* Streaming Response */}
+          {isStreaming && streamingContent && (
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-xs bg-gradient-to-br from-primary-500 to-primary-700">
+                AI
+              </div>
+              <div className="flex-1 rounded-lg p-3 bg-primary-50 border border-primary-200">
+                <p className="text-secondary-900 whitespace-pre-line">
+                  {streamingContent}
+                  <span className="inline-block w-2 h-4 bg-primary-600 animate-pulse ml-1"></span>
+                </p>
+                <p className="text-xs text-secondary-400 mt-2">
+                  Streaming...
+                </p>
+              </div>
+            </div>
+          )}
+          
           {/* Invisible div at the end for scroll target */}
           <div ref={messagesEndRef} />
         </div>
