@@ -65,7 +65,7 @@ export default function Footer() {
         message_id: `optimistic-${Date.now()}`,
         role: 'user',
         content: message,
-        created_at: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
         optimistic: true,
       };
       

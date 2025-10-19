@@ -14,7 +14,7 @@ export interface Message {
   message_id: string;
   role: 'user' | 'assistant';
   content: string;
-  created_at: string;
+  timestamp: string; // Backend sends 'timestamp' field
   tokens_used?: number;
 }
 

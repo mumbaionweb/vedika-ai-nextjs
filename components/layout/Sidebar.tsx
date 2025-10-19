@@ -60,12 +60,25 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }
 
-  // Format timestamp for display
+  // Format timestamp with relative time display
   function formatTimestamp(timestamp: string): string {
     try {
       const date = new Date(timestamp);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid timestamp:', timestamp);
+        return 'Invalid Date';
+      }
+      
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
+      
+      // Handle future dates (shouldn't happen but just in case)
+      if (diffMs < 0) {
+        return 'Just now';
+      }
+      
       const diffMins = Math.floor(diffMs / 60000);
       const diffHours = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffMs / 86400000);
@@ -75,9 +88,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
       if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
       
-      return date.toLocaleDateString();
-    } catch {
-      return timestamp;
+      // For older dates, show the actual date
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    } catch (error) {
+      console.error('Error formatting timestamp:', error, timestamp);
+      return 'Invalid Date';
     }
   }
 
@@ -232,7 +251,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       >
                         <div className="pr-5">
                           <p className="text-xs font-medium text-secondary-900 truncate leading-tight">{chat.title || chat.topic || 'Untitled'}</p>
-                          <p className="text-[10px] text-secondary-400 mt-0.5 leading-none">{formatTimestamp(chat.created_at)}</p>
+                          <p className="text-[10px] text-secondary-400 mt-0.5 leading-none">{formatTimestamp(chat.updated_at)}</p>
                         </div>
 
                         {/* Three Dots Menu */}

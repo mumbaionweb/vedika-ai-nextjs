@@ -39,7 +39,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         message_id: 'temp-user',
         role: 'user',
         content: pendingMessage,
-        created_at: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
       };
       setMessages([userMsg]);
       setConversationTitle(pendingMessage.length > 50 ? pendingMessage.substring(0, 50) + '...' : pendingMessage);
@@ -221,12 +221,25 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     }
   }
 
-  // Format timestamp
+  // Format timestamp with relative time display
   function formatTimestamp(timestamp: string): string {
     try {
       const date = new Date(timestamp);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid timestamp:', timestamp);
+        return 'Invalid Date';
+      }
+      
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
+      
+      // Handle future dates (shouldn't happen but just in case)
+      if (diffMs < 0) {
+        return 'Just now';
+      }
+      
       const diffMins = Math.floor(diffMs / 60000);
       const diffHours = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffMs / 86400000);
@@ -236,9 +249,15 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
       if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
       
-      return date.toLocaleDateString();
-    } catch {
-      return timestamp;
+      // For older dates, show the actual date
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    } catch (error) {
+      console.error('Error formatting timestamp:', error, timestamp);
+      return 'Invalid Date';
     }
   }
 
@@ -328,7 +347,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                   {message.content}
                 </p>
                 <p className="text-xs text-secondary-400 mt-2">
-                  {formatTimestamp(message.created_at)}
+                  {formatTimestamp(message.timestamp)}
                 </p>
               </div>
             </div>
