@@ -47,7 +47,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* New Chat Button */}
           <button 
-            className="w-12 h-12 mx-auto flex items-center justify-center p-3 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
+            className="w-7 h-7 mx-auto mt-8 flex items-center justify-center p-1 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
             aria-label="New Chat"
             title="New Chat"
           >
