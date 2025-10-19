@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { apiService } from '@/lib/services/api';
-import { websocketService } from '@/lib/services/websocket';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 import type { Message } from '@/lib/types/api';
 
 interface ChatPageProps {
@@ -13,6 +13,7 @@ interface ChatPageProps {
 
 export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = params;
+  const { subscribe } = useWebSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationTitle, setConversationTitle] = useState('');
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,6 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
   const hasSetupStreamingRef = useRef(false); // Prevent double setup in Strict Mode
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   function setupStreamingListener() {
     console.log('🎧 Setting up streaming listener for chat page...');
     
-    const unsubscribe = websocketService.onMessage((data: any) => {
+    const unsubscribe = subscribe((data: any) => {
       console.log('📨 Chat page received:', data);
 
       if (data.type === 'conversation_started') {
@@ -110,9 +110,6 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         setIsStreaming(false);
       }
     });
-    
-    // Store for potential cleanup
-    unsubscribeRef.current = unsubscribe;
     
     // Return the unsubscribe function
     return unsubscribe;

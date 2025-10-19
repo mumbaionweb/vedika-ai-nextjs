@@ -1,5 +1,7 @@
 'use client';
 
+import ConnectionStatus from '@/components/ui/ConnectionStatus';
+
 interface HeaderProps {
   onMenuClick: () => void;
 }
@@ -28,9 +30,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </svg>
       </button>
 
-      {/* Header content will be added later */}
-      <div className="flex-1">
-        {/* Placeholder for future content like breadcrumbs, search, etc. */}
+      {/* Header content */}
+      <div className="flex-1 flex items-center justify-end">
+        <ConnectionStatus />
       </div>
     </header>
   );

@@ -2,30 +2,49 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { websocketService, ChatChunk } from '@/lib/services/websocket';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
+import { DeviceManager } from '@/lib/utils/deviceManager';
 
 export default function Home() {
   const router = useRouter();
+  const { subscribe, send, isConnected } = useWebSocket();
   const [message, setMessage] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Initialize device session on mount
   useEffect(() => {
     initializeSession();
-    
-    return () => {
-      // Cleanup WebSocket on unmount
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-    };
   }, []);
+
+  // Subscribe to WebSocket messages
+  useEffect(() => {
+    const unsubscribe = subscribe((data: any) => {
+      if (data.type === 'conversation_started') {
+        // Immediately redirect to chat page with conversation_id
+        console.log('✅ Conversation started, redirecting to:', data.conversation_id);
+        
+        // Mark that we're in streaming mode
+        sessionStorage.setItem('is_streaming', 'true');
+        
+        // Redirect immediately - streaming will happen on chat page
+        router.push(`/chat/${data.conversation_id}`);
+      } else if (data.type === 'error') {
+        console.error('❌ Error:', data.error || data.message);
+        setError(data.error || data.message || 'An error occurred');
+        setIsSubmitting(false);
+        // Clear pending message on error
+        sessionStorage.removeItem('pending_message');
+        sessionStorage.removeItem('pending_query_type');
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribe, router]);
 
   async function initializeSession() {
     try {
@@ -63,55 +82,29 @@ export default function Home() {
     };
 
     try {
-      // Connect to WebSocket
-      await websocketService.connect();
-
       // Store the message BEFORE sending, so chat page can detect it immediately
       sessionStorage.setItem('pending_message', message);
       sessionStorage.setItem('pending_query_type', queryTypeMap[selectedAgent as keyof typeof queryTypeMap]);
       
-      // Subscribe to messages - only to get conversation_id
-      const unsubscribe = websocketService.onMessage((data: any) => {
-        if (data.type === 'conversation_started') {
-          // Immediately redirect to chat page with conversation_id
-          console.log('✅ Conversation started, redirecting to:', data.conversation_id);
-          
-          // Mark that we're in streaming mode
-          sessionStorage.setItem('is_streaming', 'true');
-          
-          // IMPORTANT: Unsubscribe from homepage listener BEFORE redirect
-          // This allows the chat page to receive the streaming messages
-          console.log('🔌 Unsubscribing homepage listener before redirect');
-          unsubscribe();
-          
-          // Redirect immediately - streaming will happen on chat page
-          router.push(`/chat/${data.conversation_id}`);
-        } else if (data.type === 'error') {
-          console.error('❌ Error:', data.error || data.message);
-          setError(data.error || data.message || 'An error occurred');
-          setIsSubmitting(false);
-          // Clear pending message on error
-          sessionStorage.removeItem('pending_message');
-          sessionStorage.removeItem('pending_query_type');
-          // Also unsubscribe on error
-          unsubscribe();
-        }
-      });
-      
-      // Store unsubscribe function for cleanup
-      unsubscribeRef.current = unsubscribe;
-
-      // Send message via WebSocket
-      await websocketService.sendMessage({
-        message,
+      // Send message via WebSocket Context
+      await send({
+        routeKey: 'stream_chat',
+        message: message,
+        device_id: DeviceManager.getDeviceId(),
+        session_id: DeviceManager.getSessionId(),
+        request_type: 'anonymous',
         model_id: 'best',
         query_type: queryTypeMap[selectedAgent as keyof typeof queryTypeMap],
       });
+
+      console.log('📤 Message sent, waiting for conversation_started...');
 
     } catch (error) {
       console.error('Failed to send message:', error);
       setError(error instanceof Error ? error.message : 'Failed to send message');
       setIsSubmitting(false);
+      sessionStorage.removeItem('pending_message');
+      sessionStorage.removeItem('pending_query_type');
     }
   };
 

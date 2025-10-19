@@ -1,29 +1,40 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { websocketService } from '@/lib/services/websocket';
+import { useWebSocket } from '@/contexts/WebSocketContext';
+import { DeviceManager } from '@/lib/utils/deviceManager';
 
 export default function Footer() {
   const router = useRouter();
   const pathname = usePathname();
+  const { subscribe, send } = useWebSocket();
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState('search');
-  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Check if we're on a chat page
   const isChatPage = pathname?.startsWith('/chat/');
   const chatId = isChatPage ? pathname?.split('/chat/')[1] : null;
 
-  // Cleanup on unmount
+  // Subscribe to WebSocket messages for follow-ups
   useEffect(() => {
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
+    const unsubscribe = subscribe((data: any) => {
+      if (data.type === 'stream_complete') {
+        console.log('✅ Follow-up streaming complete, reloading page...');
+        setIsSubmitting(false);
+        setMessage('');
+        
+        // Reload page to show updated conversation
+        window.location.reload();
+      } else if (data.type === 'error') {
+        console.error('❌ Follow-up streaming error:', data.error || data.message);
+        setIsSubmitting(false);
       }
-    };
-  }, []);
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,9 +53,6 @@ export default function Footer() {
 
   const handleFollowUp = async (conversationId: string) => {
     try {
-      // Connect to WebSocket
-      await websocketService.connect();
-
       // Map agent selection to query type
       const queryTypeMap = {
         search: 'general' as const,
@@ -52,30 +60,19 @@ export default function Footer() {
         agents: 'technical' as const,
       };
 
-      // Subscribe to messages
-      unsubscribeRef.current = websocketService.onMessage((data: any) => {
-        console.log('📨 Footer received chunk:', data);
-
-        if (data.type === 'stream_complete') {
-          console.log('✅ Follow-up streaming complete');
-          setIsSubmitting(false);
-          setMessage('');
-          
-          // Reload page to show updated conversation
-          window.location.reload();
-        } else if (data.type === 'error') {
-          console.error('❌ Follow-up streaming error:', data.error || data.message);
-          setIsSubmitting(false);
-        }
-      });
-
-      // Send follow-up message via WebSocket
-      await websocketService.sendMessage({
-        message,
+      // Send follow-up message via WebSocket Context
+      await send({
+        routeKey: 'stream_chat',
+        message: message,
         conversation_id: conversationId,
+        device_id: DeviceManager.getDeviceId(),
+        session_id: DeviceManager.getSessionId(),
+        request_type: 'anonymous',
         model_id: 'best',
         query_type: queryTypeMap[selectedAgent as keyof typeof queryTypeMap],
       });
+
+      console.log('📤 Follow-up message sent');
 
     } catch (error) {
       console.error('Failed to send follow-up:', error);
