@@ -1,60 +1,116 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { websocketService, ChatChunk } from '@/lib/services/websocket';
+import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 
 export default function Home() {
   const router = useRouter();
   const [message, setMessage] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [streamingResponse, setStreamingResponse] = useState('');
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Generate a mock conversation ID
-  const generateConversationId = () => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  };
+  // Initialize device session on mount
+  useEffect(() => {
+    initializeSession();
+    
+    return () => {
+      // Cleanup WebSocket on unmount
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, []);
+
+  async function initializeSession() {
+    try {
+      console.log('🚀 Initializing vedika-ai session...');
+      
+      // Ensure we have a valid device session
+      const session = await DeviceSessionApi.ensureSession();
+      
+      setCredits(session.credits_remaining);
+      setSessionReady(true);
+      
+      console.log('✅ Session ready:', {
+        sessionId: session.session_id,
+        credits: session.credits_remaining
+      });
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize session:', error);
+      setError('Failed to initialize session. Please refresh the page.');
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || isSubmitting) return;
+    if (!message.trim() || isSubmitting || !sessionReady) return;
 
     setIsSubmitting(true);
+    setError(null);
+    setStreamingResponse('');
+    setConversationId(null);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Generate new conversation ID
-    const conversationId = generateConversationId();
-    
-    // Store the conversation data in localStorage for the mockup
-    const conversationData = {
-      id: conversationId,
-      title: message.length > 50 ? message.substring(0, 50) + '...' : message,
-      messages: [
-        {
-          id: '1',
-          type: 'user',
-          content: message,
-          timestamp: 'Just now'
-        },
-        {
-          id: '2',
-          type: 'ai',
-          content: generateMockResponse(message, selectedAgent),
-          timestamp: 'Just now'
-        }
-      ],
-      agent: selectedAgent,
-      createdAt: new Date().toISOString()
+    // Map agent selection to query type
+    const queryTypeMap = {
+      search: 'general' as const,
+      research: 'analytical' as const,
+      agents: 'technical' as const,
     };
 
-    // Store in localStorage (in real app, this would be sent to backend)
-    const existingConversations = JSON.parse(localStorage.getItem('conversations') || '[]');
-    existingConversations.unshift(conversationData);
-    localStorage.setItem('conversations', JSON.stringify(existingConversations));
+    try {
+      // Connect to WebSocket
+      await websocketService.connect();
 
-    // Redirect to the chat page
-    router.push(`/chat/${conversationId}`);
+      // Subscribe to messages
+      unsubscribeRef.current = websocketService.onMessage((chunk: ChatChunk) => {
+        console.log('📨 Received chunk:', chunk);
+
+        if (chunk.type === 'chunk' && chunk.content) {
+          setStreamingResponse(prev => prev + chunk.content);
+        } else if (chunk.type === 'done') {
+          console.log('✅ Streaming complete');
+          setIsSubmitting(false);
+          
+          // Update credits if provided
+          if (chunk.credits_remaining !== undefined) {
+            setCredits(chunk.credits_remaining);
+          }
+
+          // Store conversation ID and redirect after a brief delay
+          if (chunk.conversation_id) {
+            setConversationId(chunk.conversation_id);
+            setTimeout(() => {
+              router.push(`/chat/${chunk.conversation_id}`);
+            }, 1000);
+          }
+        } else if (chunk.type === 'error') {
+          console.error('❌ Streaming error:', chunk.error);
+          setError(chunk.error || 'An error occurred');
+          setIsSubmitting(false);
+        }
+      });
+
+      // Send message via WebSocket
+      await websocketService.sendMessage({
+        message,
+        model_id: 'best',
+        query_type: queryTypeMap[selectedAgent as keyof typeof queryTypeMap],
+      });
+
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setError(error instanceof Error ? error.message : 'Failed to send message');
+      setIsSubmitting(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -64,66 +120,11 @@ export default function Home() {
     }
   };
 
-  // Generate mock AI response based on user message and selected agent
-  const generateMockResponse = (userMessage: string, agent: string) => {
-    const responses = {
-      search: `I've analyzed your query: "${userMessage}". Here are the key insights I found:
-
-**Search Results Summary:**
-• Found 15 relevant documents related to your query
-• Top matches show high relevance scores (85-95%)
-• Most recent information updated 2 days ago
-
-**Key Findings:**
-1. **Primary Topic**: Your query aligns with current industry best practices
-2. **Recommendations**: Based on the search results, I recommend focusing on the top 3 approaches
-3. **Next Steps**: Consider implementing the suggested framework within the next 2 weeks
-
-Would you like me to dive deeper into any specific aspect of these results?`,
-
-      research: `Based on your research request: "${userMessage}", I've conducted a comprehensive analysis:
-
-**Research Methodology:**
-• Analyzed 50+ sources across academic journals and industry reports
-• Cross-referenced data from multiple databases
-• Applied statistical analysis to identify patterns
-
-**Key Research Findings:**
-1. **Market Trends**: The data shows a 23% growth trend in this area over the past year
-2. **Competitive Analysis**: Top 5 companies are using similar strategies with varying success rates
-3. **Risk Assessment**: Identified 3 potential challenges and mitigation strategies
-
-**Detailed Insights:**
-The research reveals that companies implementing this approach see an average 40% improvement in efficiency. However, success depends on proper execution and stakeholder alignment.
-
-What specific aspect would you like me to research further?`,
-
-      agents: `I understand you're looking for assistance with: "${userMessage}". Let me connect you with the right AI agents:
-
-**Agent Specialists Available:**
-🤖 **Data Analysis Agent**: Can help with metrics, KPIs, and data visualization
-📊 **Strategy Agent**: Specializes in business planning and competitive analysis  
-💼 **Operations Agent**: Expert in process optimization and workflow management
-📈 **Growth Agent**: Focuses on scaling strategies and market expansion
-
-**Recommended Agent Match:**
-Based on your query, I recommend connecting with the **Strategy Agent** who has 95% success rate with similar requests.
-
-**Agent Capabilities:**
-• Real-time collaboration with multiple AI specialists
-• Cross-agent knowledge sharing
-• Integrated workflow management
-• 24/7 availability for complex projects
-
-Would you like me to activate the Strategy Agent or would you prefer to work with a different specialist?`
-    };
-
-    return responses[agent as keyof typeof responses] || responses.search;
-  };
-
   const handleAgentSelect = (agent: string) => {
     setSelectedAgent(agent);
+    setError(null);
   };
+
   return (
     <div className="flex flex-col items-center justify-center h-full bg-white">
       <div className="text-center space-y-8 p-8 max-w-4xl mx-auto w-full">
@@ -132,10 +133,51 @@ Would you like me to activate the Strategy Agent or would you prefer to work wit
           <h1 className="text-6xl font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 text-transparent bg-clip-text drop-shadow-lg">
             V.ai
           </h1>
+          {/* Credits Display */}
+          {credits !== null && (
+            <p className="text-sm text-secondary-500 mt-2">
+              {credits} queries remaining today
+            </p>
+          )}
         </div>
 
         {/* Chat Box */}
         <div className="w-full max-w-2xl mx-auto">
+          {/* Session Loading State */}
+          {!sessionReady && (
+            <div className="mb-4 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+              <p className="text-primary-600 text-sm flex items-center gap-2">
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Initializing session...
+              </p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm flex items-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                </svg>
+                {error}
+              </p>
+            </div>
+          )}
+
+          {/* Streaming Response Preview */}
+          {streamingResponse && (
+            <div className="mb-4 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+              <p className="text-secondary-700 text-sm whitespace-pre-wrap">
+                {streamingResponse}
+                <span className="inline-block w-2 h-4 bg-primary-600 animate-pulse ml-1"></span>
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             <div className="bg-white rounded-2xl shadow-lg border border-primary-200 overflow-hidden">
               <div className="relative">
@@ -146,7 +188,7 @@ Would you like me to activate the Strategy Agent or would you prefer to work wit
                   onKeyPress={handleKeyPress}
                   placeholder="Ask me anything about your business or get help with your tasks."
                   className="w-full px-6 pt-6 pb-20 pr-16 rounded-2xl border-0 focus:outline-none focus:ring-0 text-lg placeholder:text-secondary-400 placeholder:opacity-70"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !sessionReady}
                 />
                 
                 {/* Agent Selection Buttons - Left Bottom */}
@@ -154,11 +196,12 @@ Would you like me to activate the Strategy Agent or would you prefer to work wit
                   <button 
                     type="button"
                     onClick={() => handleAgentSelect('search')}
+                    disabled={isSubmitting}
                     className={`p-1.5 rounded-lg transition-colors ${
                       selectedAgent === 'search' 
                         ? 'bg-primary-600 hover:bg-primary-700' 
                         : 'bg-secondary-100 hover:bg-secondary-200'
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                     aria-label="Search Agent"
                     title="Search"
                   >
@@ -169,11 +212,12 @@ Would you like me to activate the Strategy Agent or would you prefer to work wit
                   <button 
                     type="button"
                     onClick={() => handleAgentSelect('research')}
+                    disabled={isSubmitting}
                     className={`p-1.5 rounded-lg transition-colors ${
                       selectedAgent === 'research' 
                         ? 'bg-primary-600 hover:bg-primary-700' 
                         : 'bg-secondary-100 hover:bg-secondary-200'
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                     aria-label="Research Agent"
                     title="Research"
                   >
@@ -184,11 +228,12 @@ Would you like me to activate the Strategy Agent or would you prefer to work wit
                   <button 
                     type="button"
                     onClick={() => handleAgentSelect('agents')}
+                    disabled={isSubmitting}
                     className={`p-1.5 rounded-lg transition-colors ${
                       selectedAgent === 'agents' 
                         ? 'bg-primary-600 hover:bg-primary-700' 
                         : 'bg-secondary-100 hover:bg-secondary-200'
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                     aria-label="Agents"
                     title="Agents"
                   >
@@ -201,7 +246,7 @@ Would you like me to activate the Strategy Agent or would you prefer to work wit
                 {/* Submit Button - Right Bottom */}
                 <button
                   type="submit"
-                  disabled={!message.trim() || isSubmitting}
+                  disabled={!message.trim() || isSubmitting || !sessionReady}
                   className="absolute right-3 bottom-3 p-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:bg-secondary-300 disabled:cursor-not-allowed transition-colors"
                   aria-label="Send message"
                 >
@@ -238,19 +283,22 @@ Would you like me to activate the Strategy Agent or would you prefer to work wit
             <div className="flex gap-3 justify-center flex-wrap">
               <button 
                 onClick={() => setMessage('Help me analyze sales data')}
-                className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200"
+                disabled={isSubmitting || !sessionReady}
+                className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 &ldquo;Help me analyze sales data&rdquo;
               </button>
               <button 
                 onClick={() => setMessage('Create a project plan')}
-                className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200"
+                disabled={isSubmitting || !sessionReady}
+                className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 &ldquo;Create a project plan&rdquo;
               </button>
               <button 
                 onClick={() => setMessage('Summarize this document')}
-                className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200"
+                disabled={isSubmitting || !sessionReady}
+                className="px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm hover:bg-primary-100 transition-colors border border-primary-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 &ldquo;Summarize this document&rdquo;
               </button>
@@ -261,4 +309,3 @@ Would you like me to activate the Strategy Agent or would you prefer to work wit
     </div>
   );
 }
-
