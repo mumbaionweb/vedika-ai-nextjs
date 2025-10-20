@@ -5,9 +5,9 @@
 
 export const config = {
   api: {
-    // Use proxy route to avoid CORS issues in development
-    // In production, point directly to backend with CORS configured
-    baseUrl: '/api/proxy', // Always use proxy in development
+    // Use production API for development (recommended by backend team)
+    baseUrl: 'https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod',
+    websocketUrl: 'wss://wa33d8dcw2.execute-api.ap-south-1.amazonaws.com/prod',
     timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000'),
   },
   app: {
@@ -18,8 +18,8 @@ export const config = {
 // Debug log
 console.log('🔧 Config loaded:', {
   baseUrl: config.api.baseUrl,
-  useProxy: process.env.NEXT_PUBLIC_USE_PROXY,
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+  websocketUrl: config.api.websocketUrl,
+  environment: config.app.environment,
 });
 
 export default config;

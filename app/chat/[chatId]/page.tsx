@@ -1,57 +1,95 @@
 'use client';
 
-import { useChat } from '@ai-sdk/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, use, useState } from 'react';
 import { apiService } from '@/lib/services/api';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import type { Message } from '@/lib/types/api';
 import { Send } from 'lucide-react';
 
 interface ChatPageProps {
-  params: {
+  params: Promise<{
     chatId: string;
-  };
+  }>;
 }
 
 export default function ChatHistoryPage({ params }: ChatPageProps) {
-  const { chatId } = params;
+  const { chatId } = use(params);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasLoadedHistoryRef = useRef(false);
 
-  const { 
-    messages, 
-    input, 
-    handleInputChange, 
-    handleSubmit, 
-    isLoading,
-    setMessages,
-    error 
-  } = useChat({
-    api: '/api/chat',
-    id: chatId,
-    body: {
-      conversation_id: chatId,
-      device_id: DeviceManager.getDeviceId(),
-      session_id: DeviceManager.getSessionId(),
-      request_type: 'anonymous',
-      model_id: 'best',
-    },
-    onResponse: (response) => {
-      console.log('📨 [CHAT PAGE] Response received:', {
-        status: response.status,
-        conversationId: chatId,
+  // Remove useChat hook - we'll handle chat manually
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Manual input change handler
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
+
+  // Manual form submission handler
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    setIsLoading(true);
+    setError(null);
+
+    // Add user message to chat
+    const newUserMessage: Message = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: userMessage,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, newUserMessage]);
+
+    try {
+      console.log('📤 [CHAT PAGE] Submitting message:', userMessage);
+      
+      // Make API call directly to AWS
+      const response = await fetch('https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          device_id: DeviceManager.getDeviceId(),
+          session_id: DeviceManager.getSessionId(),
+          conversation_id: chatId,
+          request_type: 'anonymous',
+          model_id: 'best',
+        }),
       });
-    },
-    onFinish: (message) => {
-      console.log('✅ [CHAT PAGE] Message complete:', {
-        role: message.role,
-        contentLength: message.content.length,
-      });
-    },
-    onError: (error) => {
-      console.error('❌ [CHAT PAGE] Error:', error);
-    },
-  });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ [CHAT PAGE] Response received:', data);
+        
+        // Add assistant response to chat
+        const assistantMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: data.response,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ [CHAT PAGE] Failed to send message:', response.status, errorText);
+        setError(`Failed to send message: ${response.status} - ${errorText}`);
+      }
+    } catch (error) {
+      console.error('❌ [CHAT PAGE] Error sending message:', error);
+      setError(`Error sending message: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Load conversation history on mount
   useEffect(() => {
