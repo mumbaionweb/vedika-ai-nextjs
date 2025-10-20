@@ -27,8 +27,7 @@ export default function MainLayout({ children }: LayoutProps) {
           {children}
         </main>
 
-        {/* Footer - Conditionally rendered */}
-        {!isHomePage && <Footer />}
+        {/* Footer - Removed (input now in chat page via useChat) */}
       </div>
     </div>
   );
