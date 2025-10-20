@@ -32,7 +32,18 @@ export default function Home() {
         sessionStorage.setItem('is_streaming', 'true');
         
         // Redirect immediately - streaming will happen on chat page
-        router.push(`/chat/${data.conversation_id}`);
+        // Use window.location for more reliable navigation
+        try {
+          console.log('🔄 Navigating to chat page:', `/chat/${data.conversation_id}`);
+          // Small delay to ensure WebSocket message is processed
+          setTimeout(() => {
+            window.location.href = `/chat/${data.conversation_id}`;
+          }, 100);
+        } catch (error) {
+          console.error('❌ Navigation error:', error);
+          // Fallback to router.push
+          router.push(`/chat/${data.conversation_id}`);
+        }
       } else if (data.type === 'error') {
         console.error('❌ Error:', data.error || data.message);
         setError(data.error || data.message || 'An error occurred');
