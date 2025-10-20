@@ -53,21 +53,16 @@ export default function Home() {
   async function initializeSession() {
     try {
       console.log('🚀 Initializing vedika-ai session...');
-      const deviceId = DeviceManager.getDeviceId();
-      const existingSessionId = DeviceManager.getSessionId();
-      console.log('🔍 Validating session:', existingSessionId);
       
-      // Validate existing session or create new one
-      const sessionResult = await DeviceSessionApi.createSession(deviceId, existingSessionId);
-      
-      DeviceManager.setSession(sessionResult.sessionId, sessionResult.expiresAt);
+      // Use the ensureSession method which handles validation and creation
+      const sessionResult = await DeviceSessionApi.ensureSession();
       
       console.log('✅ Session ready:', {
-        sessionId: sessionResult.sessionId,
-        credits: sessionResult.credits,
+        sessionId: sessionResult.session_id,
+        credits: sessionResult.credits_remaining,
       });
       
-      setCredits(sessionResult.credits);
+      setCredits(sessionResult.credits_remaining);
       setSessionReady(true);
     } catch (error) {
       console.error('❌ Session initialization failed:', error);
@@ -141,6 +136,7 @@ export default function Home() {
                 type="submit"
                 disabled={isLoading || !input?.trim() || !sessionReady}
                 className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                title="Send message"
               >
                 <Send className="w-5 h-5" />
               </button>
