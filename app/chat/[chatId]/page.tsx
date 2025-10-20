@@ -377,7 +377,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           )}
           
           {/* Invisible div at the end for scroll target */}
-          <div ref={messagesEndRef} />
+          <div key="messages-end" ref={messagesEndRef} />
         </div>
         
         <div className="mt-6 bg-primary-50 border-2 border-primary-300 rounded-lg p-4">
