@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { websocketManager } from '@/lib/websocketSingleton';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 
 export default function Footer() {
   const router = useRouter();
   const pathname = usePathname();
-  const { subscribe, send } = useWebSocket();
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState('search');
@@ -19,7 +18,9 @@ export default function Footer() {
 
   // Subscribe to WebSocket messages for follow-ups
   useEffect(() => {
-    const unsubscribe = subscribe((data: any) => {
+    if (!websocketManager) return;
+    
+    const unsubscribe = websocketManager.subscribe((data: any) => {
       if (data.type === 'stream_complete') {
         console.log('✅ Follow-up streaming complete, reloading page...');
         setIsSubmitting(false);
@@ -72,8 +73,12 @@ export default function Footer() {
       sessionStorage.setItem('optimistic_message', JSON.stringify(optimisticMessage));
       sessionStorage.setItem('optimistic_is_followup', 'true');
 
-      // Send follow-up message via WebSocket Context
-      await send({
+      // Send follow-up message via WebSocket Singleton
+      if (!websocketManager) {
+        throw new Error('WebSocket not initialized');
+      }
+      
+      await websocketManager.send({
         routeKey: 'stream_chat',
         message: message,
         conversation_id: conversationId,

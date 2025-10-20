@@ -5,10 +5,28 @@
 
 'use client';
 
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useState, useEffect } from 'react';
+import { websocketManager } from '@/lib/websocketSingleton';
 
 export default function ConnectionStatus() {
-  const { isConnected, reconnecting } = useWebSocket();
+  const [isConnected, setIsConnected] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+  
+  useEffect(() => {
+    if (!websocketManager) return;
+    
+    // Check initial state
+    setIsConnected(websocketManager.isConnected());
+    
+    // Poll connection status every second
+    const interval = setInterval(() => {
+      const state = websocketManager.getConnectionState();
+      setIsConnected(state === 'connected');
+      setReconnecting(state === 'connecting');
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   if (isConnected) {
     return (
