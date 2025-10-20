@@ -113,11 +113,29 @@ export default function Home() {
                 console.log('✅ Message sent, conversation ID:', conversationId);
                 
                 if (conversationId) {
-                  // Redirect to chat page
+                  // Store initial messages for the chat page
+                  const initialMessages = [
+                    {
+                      id: `user-${Date.now()}`,
+                      role: 'user',
+                      content: inputValue,
+                      timestamp: new Date().toISOString(),
+                    },
+                    {
+                      id: `assistant-${Date.now()}-1`,
+                      role: 'assistant',
+                      content: data.response,
+                      timestamp: new Date().toISOString(),
+                    },
+                  ];
+                  sessionStorage.setItem(`chat-${conversationId}`, JSON.stringify(initialMessages));
+                  console.log('💾 Stored initial messages in sessionStorage');
+                  
+                  // Redirect to chat page with a slight delay
                   console.log('🔄 Navigating to chat page:', `/chat/${conversationId}`);
                   setTimeout(() => {
                     router.push(`/chat/${conversationId}`);
-                  }, 100);
+                  }, 300);
                 } else {
                   console.log('⚠️ No conversation ID found in response');
                   console.log('Response headers:', Object.fromEntries(response.headers.entries()));

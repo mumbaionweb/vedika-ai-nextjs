@@ -98,7 +98,20 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
     async function loadHistory() {
       try {
-        console.log('📖 [CHAT PAGE] Loading conversation history for:', chatId);
+        // First check if we have initial messages in sessionStorage
+        const cachedMessages = sessionStorage.getItem(`chat-${chatId}`);
+        if (cachedMessages) {
+          console.log('💾 [CHAT PAGE] Loading messages from sessionStorage');
+          const initialMessages = JSON.parse(cachedMessages);
+          setMessages(initialMessages);
+          sessionStorage.removeItem(`chat-${chatId}`); // Clean up
+          console.log('✅ [CHAT PAGE] Loaded from cache:', {
+            messageCount: initialMessages.length,
+          });
+          return; // Skip API call if we have cached messages
+        }
+
+        console.log('📖 [CHAT PAGE] Loading conversation history from API for:', chatId);
         
         const data = await apiService.getConversation(chatId, {
           device_id: DeviceManager.getDeviceId(),
@@ -106,27 +119,32 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           request_type: 'anonymous',
         });
 
-        console.log('✅ [CHAT PAGE] History loaded:', {
+        console.log('✅ [CHAT PAGE] History loaded from API:', {
           messageCount: data.messages?.length || 0,
           title: data.title,
         });
 
-        // Convert backend messages to AI SDK format
-        const formattedMessages = (data.messages || []).map((msg: Message) => ({
-          id: msg.message_id,
+        // Convert backend messages to our format
+        const formattedMessages = (data.messages || []).map((msg: any) => ({
+          id: msg.message_id || `msg-${Date.now()}-${Math.random()}`,
           role: msg.role as 'user' | 'assistant',
           content: msg.content,
-          createdAt: new Date(msg.timestamp),
+          timestamp: msg.timestamp,
         }));
 
         setMessages(formattedMessages);
+        
+        console.log('📝 [CHAT PAGE] Messages set from API:', {
+          count: formattedMessages.length,
+          messages: formattedMessages,
+        });
       } catch (error) {
         console.error('❌ [CHAT PAGE] Failed to load history:', error);
       }
     }
 
     loadHistory();
-  }, [chatId, setMessages]);
+  }, [chatId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
