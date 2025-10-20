@@ -1,7 +1,5 @@
 'use client';
 
-import ConnectionStatus from '@/components/ui/ConnectionStatus';
-
 interface HeaderProps {
   onMenuClick: () => void;
 }
@@ -32,7 +30,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
       {/* Header content */}
       <div className="flex-1 flex items-center justify-end">
-        <ConnectionStatus />
+        {/* Connection status removed - HTTP doesn't need connection indicator */}
       </div>
     </header>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useChat } from 'ai/react';
+import { useChat } from '@ai-sdk/react';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { Search, FileText, Sparkles, Send } from 'lucide-react';

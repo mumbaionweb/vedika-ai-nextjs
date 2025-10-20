@@ -1,6 +1,3 @@
-import { StreamingTextResponse } from 'ai';
-import { DeviceManager } from '@/lib/utils/deviceManager';
-
 export const runtime = 'edge';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod';
@@ -10,7 +7,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log('🔷 [AI Chat API] Request received:', {
       conversation_id: body.conversation_id,
-      message: body.messages?.[body.messages.length - 1]?.content?.substring(0, 50),
+      messageCount: body.messages?.length || 0,
       timestamp: new Date().toISOString(),
     });
 
@@ -33,6 +30,7 @@ export async function POST(req: Request) {
     console.log('📤 [AI Chat API] Sending to backend:', {
       url: `${BACKEND_URL}/ai/chat`,
       conversation_id: backendRequest.conversation_id,
+      message: userMessage.substring(0, 50),
       timestamp: new Date().toISOString(),
     });
 
@@ -48,38 +46,51 @@ export async function POST(req: Request) {
     if (!response.ok) {
       console.error('❌ [AI Chat API] Backend error:', response.status, response.statusText);
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Backend returned ${response.status}`);
+      return new Response(
+        JSON.stringify({ 
+          error: errorData.error || `Backend returned ${response.status}`,
+        }),
+        {
+          status: response.status,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const data = await response.json();
     console.log('✅ [AI Chat API] Backend response received:', {
       conversation_id: data.conversation_id,
       has_message: !!data.message,
+      content_length: data.message?.content?.length || 0,
       timestamp: new Date().toISOString(),
     });
 
-    // Convert your backend response to AI SDK format
-    const aiSdkMessage = {
-      id: data.message?.message_id || `msg-${Date.now()}`,
-      role: 'assistant' as const,
-      content: data.message?.content || '',
-      createdAt: new Date(data.message?.timestamp || Date.now()),
-    };
+    // Convert your backend response to AI SDK streaming format
+    const assistantMessage = data.message?.content || '';
+    const conversationId = data.conversation_id || '';
+    const messageId = data.message?.message_id || `msg-${Date.now()}`;
 
-    // Create a ReadableStream for AI SDK (even though not streaming from backend yet)
+    // Create a streaming response in the format AI SDK expects
+    // Format: data: {...}\n\n for each chunk
+    const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
-        // Send the message content as a single chunk
-        controller.enqueue(new TextEncoder().encode(aiSdkMessage.content));
+        // Send the message as a single chunk (since backend doesn't stream yet)
+        const chunk = `0:${JSON.stringify(assistantMessage)}\n`;
+        controller.enqueue(encoder.encode(chunk));
         controller.close();
       },
     });
 
     // Return streaming response with conversation_id in headers
-    return new StreamingTextResponse(stream, {
+    return new Response(stream, {
+      status: 200,
       headers: {
-        'X-Conversation-Id': data.conversation_id || '',
-        'X-Message-Id': aiSdkMessage.id,
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Conversation-Id': conversationId,
+        'X-Message-Id': messageId,
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
     });
   } catch (error: any) {
@@ -97,4 +108,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
