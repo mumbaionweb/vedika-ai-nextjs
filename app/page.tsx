@@ -56,7 +56,7 @@ export default function Home() {
     });
 
     return unsubscribe;
-  }, [subscribe, router]);
+  }, [router]);
 
   async function initializeSession() {
     try {
