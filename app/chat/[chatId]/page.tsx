@@ -103,15 +103,18 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   }, [chatId]);
 
   const setupStreamingListener = useCallback(() => {
-    console.log('🎧 [CHAT PAGE] Setting up streaming listener for chat page...');
+    console.log('🎧 [CHAT PAGE] ========== SETTING UP STREAMING LISTENER ==========');
     console.log('🎧 [CHAT PAGE] ChatId:', chatId);
     console.log('🎧 [CHAT PAGE] IsStreaming:', isStreaming);
     console.log('🎧 [CHAT PAGE] Messages count:', messages.length);
+    console.log('🎧 [CHAT PAGE] Timestamp:', new Date().toISOString());
     
     const unsubscribe = subscribe((data: any) => {
-      console.log('📨 [CHAT PAGE] WebSocket message received:', data);
+      console.log('📨 [CHAT PAGE] ========== WEBSOCKET MESSAGE RECEIVED ==========');
+      console.log('📨 [CHAT PAGE] Full data:', JSON.stringify(data, null, 2));
       console.log('📨 [CHAT PAGE] Message type:', data.type);
       console.log('📨 [CHAT PAGE] Current isStreaming:', isStreaming);
+      console.log('📨 [CHAT PAGE] Timestamp:', new Date().toISOString());
       
       if (data.type === 'stream_start') {
         console.log('🎬 [CHAT PAGE] Stream started!');
@@ -198,7 +201,10 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       // Return cleanup function
       return () => {
         console.log('🧹 [CHAT PAGE] Cleaning up streaming listener (React Strict Mode or unmount)');
-        console.log('🧹 [CHAT PAGE] hasSetupStreamingRef remains:', hasSetupStreamingRef.current);
+        console.log('🧹 [CHAT PAGE] RESETTING hasSetupStreamingRef to false for React Strict Mode second run');
+        
+        // DON'T keep the ref as true - reset it so React Strict Mode's second run can set up again!
+        hasSetupStreamingRef.current = false;
         
         if (unsubscribe) {
           console.log('🧹 [CHAT PAGE] Calling unsubscribe function');
