@@ -163,7 +163,10 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     if (pendingMessage && !hasSetupStreamingRef.current) {
       // This is a NEW conversation - streaming will happen here
       console.log('🆕 [CHAT PAGE] New conversation detected, setting up streaming...');
-      hasSetupStreamingRef.current = true; // Mark as setup to prevent double runs
+      console.log('🆕 [CHAT PAGE] Marking hasSetupStreamingRef as true to prevent React Strict Mode double-setup');
+      
+      // Set this BEFORE setup to prevent React Strict Mode double-setup
+      hasSetupStreamingRef.current = true;
       
       // Create initial user message in UI
       const userMsg: Message = {
@@ -175,19 +178,28 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       setMessages([userMsg]);
       setConversationTitle(pendingMessage.length > 50 ? pendingMessage.substring(0, 50) + '...' : pendingMessage);
       
-      // Clear the pending message AFTER reading it
-      sessionStorage.removeItem('pending_message');
-      sessionStorage.removeItem('pending_query_type');
+      // DON'T clear the pending message yet - keep it for the second React Strict Mode run
+      // But mark it as "being processed" to prevent double processing
+      sessionStorage.setItem('pending_message_processing', 'true');
       
       // Set up streaming listener
       const unsubscribe = setupStreamingListener();
       setIsStreaming(true);
       setLoading(false);
       
+      // Clear the pending message AFTER a delay to allow React Strict Mode to complete
+      setTimeout(() => {
+        console.log('🧹 [CHAT PAGE] Clearing sessionStorage after successful setup');
+        sessionStorage.removeItem('pending_message');
+        sessionStorage.removeItem('pending_query_type');
+        sessionStorage.removeItem('pending_message_processing');
+      }, 100);
+      
       // Return cleanup function
       return () => {
         console.log('🧹 [CHAT PAGE] Cleaning up streaming listener (React Strict Mode or unmount)');
-        console.log('🧹 [CHAT PAGE] hasSetupStreamingRef will remain:', hasSetupStreamingRef.current);
+        console.log('🧹 [CHAT PAGE] hasSetupStreamingRef remains:', hasSetupStreamingRef.current);
+        
         if (unsubscribe) {
           console.log('🧹 [CHAT PAGE] Calling unsubscribe function');
           unsubscribe();
