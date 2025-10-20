@@ -66,7 +66,14 @@ export default function Home() {
       setSessionReady(true);
     } catch (error) {
       console.error('❌ Session initialization failed:', error);
+      console.error('Error details:', error);
       setSessionReady(false);
+      
+      // For debugging - let's also try to see what the error is
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     }
   }
 
@@ -162,6 +169,11 @@ export default function Home() {
               Credits remaining: {credits}
             </div>
           )}
+          
+          {/* Debug info */}
+          <div className="text-center text-xs text-gray-400 mt-2">
+            Debug: sessionReady={sessionReady ? 'true' : 'false'}, input="{input}", input.trim()="{input?.trim()}"
+          </div>
         </form>
 
         {/* Suggestions */}

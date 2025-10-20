@@ -28,6 +28,7 @@ export class DeviceSessionApi {
     
     console.log('🔐 Creating device session for:', deviceId);
     
+    console.log('🔗 Making request to:', `${config.api.baseUrl}/auth/device-session`);
     const response = await fetch(`${config.api.baseUrl}/auth/device-session`, {
       method: 'POST',
       headers: {
