@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiService } from '@/lib/services/api';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { websocketManager } from '@/lib/websocketSingleton';
 import type { Message } from '@/lib/types/api';
 
 interface ChatPageProps {
@@ -13,7 +13,6 @@ interface ChatPageProps {
 
 export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = params;
-  const { subscribe } = useWebSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationTitle, setConversationTitle] = useState('');
   const [loading, setLoading] = useState(true);
@@ -109,7 +108,12 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     console.log('🎧 [CHAT PAGE] Messages count:', messages.length);
     console.log('🎧 [CHAT PAGE] Timestamp:', new Date().toISOString());
     
-    const unsubscribe = subscribe((data: any) => {
+    if (!websocketManager) {
+      console.error('❌ [CHAT PAGE] WebSocket manager not initialized!');
+      return () => {};
+    }
+    
+    const unsubscribe = websocketManager.subscribe((data: any) => {
       console.log('📨 [CHAT PAGE] ========== WEBSOCKET MESSAGE RECEIVED ==========');
       console.log('📨 [CHAT PAGE] Full data:', JSON.stringify(data, null, 2));
       console.log('📨 [CHAT PAGE] Message type:', data.type);
@@ -147,7 +151,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     console.log('✅ [CHAT PAGE] Streaming listener setup complete, returning unsubscribe function');
     // Return the unsubscribe function
     return unsubscribe;
-  }, [subscribe, loadConversation, chatId, isStreaming, messages.length]);
+  }, [loadConversation, chatId, isStreaming, messages.length]);
 
   useEffect(() => {
     console.log('🔄 [CHAT PAGE] useEffect triggered');

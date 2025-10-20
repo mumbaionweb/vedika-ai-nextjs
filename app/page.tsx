@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { websocketManager } from '@/lib/websocketSingleton';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 
 export default function Home() {
   const router = useRouter();
-  const { subscribe, send, isConnected } = useWebSocket();
   const [message, setMessage] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,7 +22,9 @@ export default function Home() {
 
   // Subscribe to WebSocket messages
   useEffect(() => {
-    const unsubscribe = subscribe((data: any) => {
+    if (!websocketManager) return;
+    
+    const unsubscribe = websocketManager.subscribe((data: any) => {
       if (data.type === 'conversation_started') {
         // Immediately redirect to chat page with conversation_id
         console.log('✅ Conversation started, redirecting to:', data.conversation_id);
@@ -97,8 +98,12 @@ export default function Home() {
       sessionStorage.setItem('pending_message', message);
       sessionStorage.setItem('pending_query_type', queryTypeMap[selectedAgent as keyof typeof queryTypeMap]);
       
-      // Send message via WebSocket Context
-      await send({
+      // Send message via WebSocket Singleton
+      if (!websocketManager) {
+        throw new Error('WebSocket not initialized');
+      }
+      
+      await websocketManager.send({
         routeKey: 'stream_chat',
         message: message,
         device_id: DeviceManager.getDeviceId(),
