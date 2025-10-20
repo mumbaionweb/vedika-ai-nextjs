@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiService } from '@/lib/services/api';
 import { useWebSocket } from '@/contexts/WebSocketContext';
 import type { Message } from '@/lib/types/api';
@@ -357,7 +357,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
               </div>
               <div className="flex-1 rounded-lg p-3 bg-primary-50 border border-primary-200">
                 {streamingContent ? (
-                  <>
+                  <React.Fragment key="streaming-content">
                     <p className="text-secondary-900 whitespace-pre-line">
                       {streamingContent}
                       <span className="inline-block w-2 h-4 bg-primary-600 animate-pulse ml-1"></span>
@@ -365,7 +365,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                     <p className="text-xs text-secondary-400 mt-2">
                       Streaming...
                     </p>
-                  </>
+                  </React.Fragment>
                 ) : (
                   <div className="flex items-center gap-2 text-secondary-600">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
