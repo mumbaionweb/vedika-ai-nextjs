@@ -221,10 +221,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </button>
 
             {/* Chat History Submenu - Ultra Sleek Design */}
-            {(() => {
-              console.log('🔍 Checking showChatHistory:', showChatHistory);
-              return showChatHistory;
-            })() && (
+            {showChatHistory && (
               <div className="absolute left-full top-0 -ml-1 w-56 bg-white rounded-lg shadow-2xl border border-gray-100 z-50 overflow-hidden">
                 {/* Submenu Header */}
                 <div className="px-3 py-1.5 bg-gradient-to-r from-primary-50 to-white border-b border-gray-100">
