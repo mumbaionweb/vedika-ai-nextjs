@@ -60,8 +60,7 @@ export default function Home() {
       // Validate existing session or create new one
       const sessionResult = await DeviceSessionApi.createSession(deviceId, existingSessionId);
       
-      DeviceManager.setSessionId(sessionResult.sessionId);
-      DeviceManager.setSessionExpiry(sessionResult.expiresAt);
+      DeviceManager.setSession(sessionResult.sessionId, sessionResult.expiresAt);
       
       console.log('✅ Session ready:', {
         sessionId: sessionResult.sessionId,
