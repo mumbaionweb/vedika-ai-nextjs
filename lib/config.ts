@@ -1,6 +1,7 @@
 /**
  * Application Configuration
  * Centralized configuration for API endpoints and app settings
+ * Updated: 2025-10-20 - Next.js 15 compatible, no WebSocket dependencies
  */
 
 export const config = {
