@@ -140,7 +140,7 @@ export default function Home() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading || !input.trim() || !sessionReady}
+                disabled={isLoading || !input?.trim() || !sessionReady}
                 className="p-3 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
               >
                 <Send className="w-5 h-5" />

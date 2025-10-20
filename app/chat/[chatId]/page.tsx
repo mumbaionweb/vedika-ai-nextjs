@@ -225,7 +225,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             <div className="flex items-center justify-end px-6 py-3 bg-white border-t border-primary-200">
               <button
                 type="submit"
-                disabled={isLoading || !input.trim()}
+                disabled={isLoading || !input?.trim()}
                 className="p-2 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
               >
                 <Send className="w-4 h-4" />
