@@ -80,7 +80,11 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📨 WebSocket message:', data);
+          console.log('📨 [WEBSOCKET CONTEXT] ========== RAW MESSAGE RECEIVED ==========');
+          console.log('📨 [WEBSOCKET CONTEXT] Full message:', JSON.stringify(data, null, 2));
+          console.log('📨 [WEBSOCKET CONTEXT] Message type:', data.type);
+          console.log('📨 [WEBSOCKET CONTEXT] Timestamp:', new Date().toISOString());
+          console.log('📨 [WEBSOCKET CONTEXT] Active listeners:', listenersRef.current.size);
           console.log('👥 Notifying', listenersRef.current.size, 'handler(s)');
           
           // Notify ALL registered listeners
