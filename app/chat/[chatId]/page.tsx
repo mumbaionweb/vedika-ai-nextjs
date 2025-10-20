@@ -103,18 +103,29 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   }, [chatId]);
 
   const setupStreamingListener = useCallback(() => {
-    console.log('🎧 Setting up streaming listener for chat page...');
+    console.log('🎧 [CHAT PAGE] Setting up streaming listener for chat page...');
+    console.log('🎧 [CHAT PAGE] ChatId:', chatId);
+    console.log('🎧 [CHAT PAGE] IsStreaming:', isStreaming);
+    console.log('🎧 [CHAT PAGE] Messages count:', messages.length);
     
     const unsubscribe = subscribe((data: any) => {
-      console.log('📨 Chat page received:', data);
+      console.log('📨 [CHAT PAGE] WebSocket message received:', data);
+      console.log('📨 [CHAT PAGE] Message type:', data.type);
+      console.log('📨 [CHAT PAGE] Current isStreaming:', isStreaming);
       
       if (data.type === 'stream_start') {
+        console.log('🎬 [CHAT PAGE] Stream started!');
         setStreamingContent('');
         setIsStreaming(true);
       } else if (data.type === 'stream_chunk') {
-        setStreamingContent(prev => prev + (data.content || ''));
+        console.log('📦 [CHAT PAGE] Stream chunk received:', data.content?.substring(0, 50));
+        setStreamingContent(prev => {
+          const newContent = prev + (data.content || '');
+          console.log('📝 [CHAT PAGE] Updated streaming content length:', newContent.length);
+          return newContent;
+        });
       } else if (data.type === 'stream_complete') {
-        console.log('✅ Stream complete, reloading conversation...');
+        console.log('✅ [CHAT PAGE] Stream complete, reloading conversation...');
         setIsStreaming(false);
         setStreamingContent('');
         // Reload the conversation to get the final messages
@@ -122,25 +133,36 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           loadConversation();
         }, 500);
       } else if (data.type === 'stream_error') {
-        console.error('❌ Streaming error:', data.error || data.message);
+        console.error('❌ [CHAT PAGE] Streaming error:', data.error || data.message);
         setError(data.error || data.message || 'An error occurred');
         setIsStreaming(false);
+      } else {
+        console.log('ℹ️ [CHAT PAGE] Ignoring message type:', data.type);
       }
     });
     
+    console.log('✅ [CHAT PAGE] Streaming listener setup complete, returning unsubscribe function');
     // Return the unsubscribe function
     return unsubscribe;
-  }, [subscribe, loadConversation]);
+  }, [subscribe, loadConversation, chatId, isStreaming, messages.length]);
 
   useEffect(() => {
+    console.log('🔄 [CHAT PAGE] useEffect triggered');
+    console.log('🔄 [CHAT PAGE] ChatId:', chatId);
+    console.log('🔄 [CHAT PAGE] hasSetupStreamingRef.current:', hasSetupStreamingRef.current);
+    
     // Check if this is a new conversation with streaming in progress
     const pendingMessage = sessionStorage.getItem('pending_message');
     const optimisticMessageStr = sessionStorage.getItem('optimistic_message');
     const isFollowup = sessionStorage.getItem('optimistic_is_followup') === 'true';
     
+    console.log('🔄 [CHAT PAGE] pendingMessage:', pendingMessage);
+    console.log('🔄 [CHAT PAGE] optimisticMessageStr:', optimisticMessageStr);
+    console.log('🔄 [CHAT PAGE] isFollowup:', isFollowup);
+    
     if (pendingMessage && !hasSetupStreamingRef.current) {
       // This is a NEW conversation - streaming will happen here
-      console.log('🆕 New conversation detected, setting up streaming...');
+      console.log('🆕 [CHAT PAGE] New conversation detected, setting up streaming...');
       hasSetupStreamingRef.current = true; // Mark as setup to prevent double runs
       
       // Create initial user message in UI
@@ -164,8 +186,10 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       
       // Return cleanup function
       return () => {
-        console.log('🧹 Cleaning up chat page streaming listener');
+        console.log('🧹 [CHAT PAGE] Cleaning up streaming listener (React Strict Mode or unmount)');
+        console.log('🧹 [CHAT PAGE] hasSetupStreamingRef will remain:', hasSetupStreamingRef.current);
         if (unsubscribe) {
+          console.log('🧹 [CHAT PAGE] Calling unsubscribe function');
           unsubscribe();
         }
       };
@@ -196,10 +220,16 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       };
     } else if (!pendingMessage && !optimisticMessageStr) {
       // Load existing conversation from backend (normal case)
+      console.log('📖 [CHAT PAGE] Loading existing conversation (no pending/optimistic messages)');
       loadConversation();
       
       // No cleanup needed for API call
       return undefined;
+    } else {
+      console.log('⏭️ [CHAT PAGE] Skipping - condition not met');
+      console.log('⏭️ [CHAT PAGE] pendingMessage:', !!pendingMessage);
+      console.log('⏭️ [CHAT PAGE] optimisticMessageStr:', !!optimisticMessageStr);
+      console.log('⏭️ [CHAT PAGE] hasSetupStreamingRef.current:', hasSetupStreamingRef.current);
     }
   }, [chatId, loadConversation, loadConversationWithOptimisticMessage, setupStreamingListener]);
 
