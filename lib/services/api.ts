@@ -13,6 +13,8 @@ import type {
   GetConversationRequest,
   ConversationDetail,
   DeleteConversationRequest,
+  CoinsBalance,
+  CoinsTransaction,
   APIResponse,
   APIError,
 } from '../types/api';
@@ -248,6 +250,50 @@ class APIService {
         error: {
           error: 'Network Error',
           message: error instanceof Error ? error.message : 'Failed to delete conversation',
+          status_code: 0,
+        },
+      };
+    }
+  }
+
+  /**
+   * Get coins balance for user or device
+   */
+  async getCoinsBalance(userId?: string): Promise<APIResponse<CoinsBalance>> {
+    try {
+      const session = getOrCreateDeviceSession();
+
+      const params = new URLSearchParams({
+        request_type: userId ? 'authenticated' : 'anonymous',
+      });
+
+      if (userId) {
+        params.append('user_id', userId);
+      } else {
+        params.append('device_id', session.device_id);
+        params.append('session_id', session.session_id);
+      }
+
+      const url = `${this.baseUrl}/coins/balance?${params}`;
+      console.log('🪙 [API] Fetching coins balance from:', url);
+      console.log('🪙 [API] Session:', session);
+
+      const response = await this.fetchWithTimeout(url);
+      
+      console.log('🪙 [API] Response status:', response.status);
+      console.log('🪙 [API] Response headers:', Object.fromEntries(response.headers.entries()));
+
+      const result = await this.handleResponse<CoinsBalance>(response);
+      console.log('🪙 [API] Parsed result:', result);
+
+      return result;
+    } catch (error) {
+      console.error('❌ [API] Error fetching coins balance:', error);
+      return {
+        success: false,
+        error: {
+          error: 'Network Error',
+          message: error instanceof Error ? error.message : 'Failed to get coins balance',
           status_code: 0,
         },
       };

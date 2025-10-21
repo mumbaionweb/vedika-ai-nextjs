@@ -1,14 +1,39 @@
 'use client';
 
 import React from 'react';
+import { useCoins } from '../../hooks/useCoins';
 
 interface VedikaCoinsProps {
-  used: number;
-  total: number;
   className?: string;
 }
 
-export default function VedikaCoins({ used, total, className = '' }: VedikaCoinsProps) {
+export default function VedikaCoins({ className = '' }: VedikaCoinsProps) {
+  const { usedCredits, totalCredits, loading, error } = useCoins();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className={`flex items-center gap-2 bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-200 ${className}`}>
+        <div className="relative">
+          <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center animate-pulse">
+            <span className="text-gray-600 font-bold text-xs">V</span>
+          </div>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-xs font-semibold text-gray-500 animate-pulse">
+            ...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state with fallback values
+  if (error) {
+    console.warn('Failed to load coins balance:', error);
+    // Fallback to default values on error
+  }
+
   return (
     <div className={`flex items-center gap-2 bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-200 ${className}`}>
       {/* Golden Coin with Shining Animation */}
@@ -34,7 +59,7 @@ export default function VedikaCoins({ used, total, className = '' }: VedikaCoins
       {/* Usage Display */}
       <div className="flex flex-col">
         <span className="text-xs font-semibold text-gray-800">
-          {used}/{total}
+          {usedCredits}/{totalCredits}
         </span>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, use, useState } from 'react';
 import { apiService } from '@/lib/services/api';
 import { DeviceManager } from '@/lib/utils/deviceManager';
+import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import type { Message } from '@/lib/types/api';
 import { Send } from 'lucide-react';
 
@@ -17,11 +18,34 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasLoadedHistoryRef = useRef(false);
 
+  // Session state
+  const [sessionReady, setSessionReady] = useState(false);
+
   // Remove useChat hook - we'll handle chat manually
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize session on mount
+  useEffect(() => {
+    async function initSession() {
+      try {
+        console.log('🚀 [CHAT PAGE] Initializing vedika-ai session...');
+        const session = await DeviceSessionApi.ensureSession();
+        console.log('✅ [CHAT PAGE] Session ready:', {
+          sessionId: session.session_id,
+          credits: session.credits_remaining
+        });
+        setSessionReady(true);
+      } catch (error) {
+        console.error('❌ [CHAT PAGE] Session initialization failed:', error);
+        setError('Failed to initialize session. Please refresh the page.');
+      }
+    }
+
+    initSession();
+  }, []);
 
   // Manual input change handler
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,8 +308,9 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             <div className="flex items-center justify-end px-6 py-3 bg-white border-t border-primary-200">
               <button
                 type="submit"
-                disabled={isLoading || !input?.trim()}
+                disabled={!sessionReady || isLoading || !input?.trim()}
                 className="p-2 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+                title={!sessionReady ? 'Initializing session...' : undefined}
               >
                 <Send className="w-4 h-4" />
               </button>

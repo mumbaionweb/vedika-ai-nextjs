@@ -33,7 +33,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       {/* Header content */}
       <div className="flex-1 flex items-center justify-end">
         {/* Vedika Coins Display */}
-        <VedikaCoins used={0} total={20} />
+        <VedikaCoins />
       </div>
     </header>
   );

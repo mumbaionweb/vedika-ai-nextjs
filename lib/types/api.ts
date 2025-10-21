@@ -115,6 +115,34 @@ export interface APIError {
   details?: Record<string, any>;
 }
 
+// Coins Types
+export interface CoinsBalance {
+  balance: number;
+  available: number;
+  locked: number;
+  expiring_soon: number;
+  total_earned: number;
+  total_spent: number;
+  plan: string;
+  daily_credits: number;
+  credits_used: number;
+  credits_remaining: number;
+  expires_at?: string;
+}
+
+export interface CoinsTransaction {
+  transaction_id: string;
+  amount: number;
+  type: 'earn' | 'spend';
+  source?: string;
+  purpose?: string;
+  balance_before: number;
+  balance_after: number;
+  created_at: string;
+  expires_at?: string;
+  metadata?: Record<string, any>;
+}
+
 // API Response Wrapper
 export type APIResponse<T> = 
   | { success: true; data: T }
