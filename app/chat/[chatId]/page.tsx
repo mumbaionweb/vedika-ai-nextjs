@@ -6,7 +6,7 @@ import { DeviceManager } from '@/lib/utils/deviceManager';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import type { Message } from '@/lib/types/api';
-import { Send } from 'lucide-react';
+import { Send, Search, FileText, Sparkles } from 'lucide-react';
 
 interface ChatPageProps {
   params: Promise<{
@@ -28,6 +28,14 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState('search');
+
+  // Agent definitions
+  const agents = [
+    { id: 'search', label: 'Search', icon: Search },
+    { id: 'research', label: 'Research', icon: FileText },
+    { id: 'agents', label: 'Agents', icon: Sparkles },
+  ];
 
   // Initialize session on mount
   useEffect(() => {
@@ -89,6 +97,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           conversation_id: chatId,
           request_type: 'anonymous',
           model_id: 'best',
+          query_type: selectedAgent === 'search' ? 'general' : selectedAgent === 'research' ? 'analytical' : 'technical',
         }),
       });
 
@@ -297,28 +306,54 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       {/* Input Form at Bottom */}
       <div className="border-t border-secondary-200 bg-white p-4">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-          <div className="bg-gradient-to-br from-primary-50 via-white to-primary-50 rounded-xl shadow-lg border-2 border-primary-300 overflow-hidden">
+          <div className="bg-stone-50 rounded-2xl shadow-2xl border-2 border-primary-300 overflow-hidden">
             {/* Input Area */}
             <div className="relative">
               <input
                 type="text"
                 value={input}
                 onChange={handleInputChange}
-                placeholder="Ask a follow-up question..."
-                className="w-full px-6 py-4 text-base bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm"
-                disabled={isLoading}
+                placeholder="Ask me anything about your business or get help with your tasks."
+                className="w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left"
+                disabled={isLoading || !sessionReady}
               />
             </div>
 
-            {/* Bottom Bar with Submit */}
-            <div className="flex items-center justify-end px-6 py-3 bg-white border-t border-primary-200">
+            {/* Bottom Bar with Agents and Submit */}
+            <div className="flex items-center justify-between px-6 py-4 bg-stone-50 border-t border-primary-200">
+              {/* Agent Selection */}
+              <div className="flex gap-2">
+                {agents.map((agent) => {
+                  const Icon = agent.icon;
+                  const isSelected = selectedAgent === agent.id;
+                  
+                  return (
+                    <button
+                      key={agent.id}
+                      type="button"
+                      onClick={() => setSelectedAgent(agent.id)}
+                      className={`p-1.5 rounded-lg transition-all ${
+                        isSelected
+                          ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg'
+                          : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
+                      }`}
+                      title={agent.label}
+                      disabled={isLoading}
+                    >
+                      <Icon className="w-2.5 h-2.5" />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={!sessionReady || isLoading || !input?.trim()}
-                className="p-2 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+                className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
                 title={!sessionReady ? 'Initializing session...' : undefined}
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-2.5 h-2.5" />
               </button>
             </div>
           </div>
