@@ -261,29 +261,6 @@ export default function Home() {
           */}
         </form>
 
-        {/* Suggestions */}
-        <div className="mt-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              onClick={() => setInputValue('Help me analyze sales data')}
-              className="p-4 bg-white rounded-lg border border-secondary-200 hover:border-primary-400 hover:shadow-md transition-all text-left text-sm text-secondary-700"
-            >
-              &ldquo;Help me analyze sales data&rdquo;
-            </button>
-            <button
-              onClick={() => setInputValue('Create a project plan')}
-              className="p-4 bg-white rounded-lg border border-secondary-200 hover:border-primary-400 hover:shadow-md transition-all text-left text-sm text-secondary-700"
-            >
-              &ldquo;Create a project plan&rdquo;
-            </button>
-            <button
-              onClick={() => setInputValue('Summarize this document')}
-              className="p-4 bg-white rounded-lg border border-secondary-200 hover:border-primary-400 hover:shadow-md transition-all text-left text-sm text-secondary-700"
-            >
-              &ldquo;Summarize this document&rdquo;
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
