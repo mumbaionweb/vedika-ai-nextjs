@@ -33,7 +33,6 @@ export default function VedikaCoins({ used, total, className = '' }: VedikaCoins
         <span className="text-sm font-semibold text-gray-800">
           {used}/{total}
         </span>
-        <span className="text-xs text-gray-500">Vedika Coins</span>
       </div>
     </div>
   );
