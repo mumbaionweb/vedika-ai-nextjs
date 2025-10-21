@@ -226,9 +226,9 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                   <p className="text-secondary-900 whitespace-pre-line">
                     {message.content}
                   </p>
-                  {message.createdAt && (
+                  {message.timestamp && (
                     <p className="text-xs text-secondary-400 mt-2">
-                      {formatTimestamp(message.createdAt)}
+                      {formatTimestamp(message.timestamp)}
                     </p>
                   )}
                 </div>
