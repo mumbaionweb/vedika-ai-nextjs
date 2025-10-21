@@ -237,7 +237,7 @@ export default function Home() {
             </div>
           )}
           
-          {/* Debug info */}
+          {/* Debug info - commented out for production
           <div className="text-center text-sm bg-yellow-100 p-2 rounded mt-2">
             <strong>Debug:</strong> sessionReady={sessionReady ? 'true' : 'false'}, inputValue=&quot;{inputValue}&quot;, inputValue.trim()=&quot;{inputValue?.trim()}&quot;, isLoading={isLoading ? 'true' : 'false'}
             <br />
@@ -260,6 +260,7 @@ export default function Home() {
               Reset Session (Dev)
             </button>
           </div>
+          */}
         </form>
 
         {/* Suggestions */}
