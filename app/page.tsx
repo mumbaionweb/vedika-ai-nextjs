@@ -263,7 +263,6 @@ export default function Home() {
 
         {/* Suggestions */}
         <div className="mt-8">
-          <p className="text-center text-secondary-500 text-sm mb-4">Try asking:</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => setInputValue('Help me analyze sales data')}
