@@ -313,7 +313,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                 type="text"
                 value={input}
                 onChange={handleInputChange}
-                placeholder="Ask me anything about your business or get help with your tasks."
+                placeholder="Ask a Follow-up Question"
                 className="w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left"
                 disabled={isLoading || !sessionReady}
               />
