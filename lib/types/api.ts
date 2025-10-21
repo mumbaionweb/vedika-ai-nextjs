@@ -36,6 +36,7 @@ export interface Conversation {
 // Conversation with Messages
 export interface ConversationDetail {
   conversation_id: string;
+  title?: string;
   messages: Message[];
   total: number;
 }
