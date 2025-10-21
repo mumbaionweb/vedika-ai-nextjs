@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { SidebarProps, User } from '@/types';
 import { apiService } from '@/lib/services/api';
 import type { Conversation } from '@/lib/types/api';
-import VedikaCoins from '@/components/ui/VedikaCoins';
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter();
@@ -328,14 +327,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Bottom Section - Vedika Coins & Profile */}
-        <div className="p-4 border-t border-primary-300 space-y-3">
-          {/* Vedika Coins Display */}
-          <div className="flex justify-center">
-            <VedikaCoins used={2} total={20} />
-          </div>
-          
-          {/* Profile */}
+        {/* Bottom Section - Profile */}
+        <div className="p-4 border-t border-primary-300">
           <div className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white hover:shadow-sm transition-colors cursor-pointer border border-transparent hover:border-primary-200">
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">

@@ -1,5 +1,7 @@
 'use client';
 
+import VedikaCoins from '@/components/ui/VedikaCoins';
+
 interface HeaderProps {
   onMenuClick: () => void;
 }
@@ -30,7 +32,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
       {/* Header content */}
       <div className="flex-1 flex items-center justify-end">
-        {/* Connection status removed - HTTP doesn't need connection indicator */}
+        {/* Vedika Coins Display */}
+        <VedikaCoins used={0} total={20} />
       </div>
     </header>
   );
