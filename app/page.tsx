@@ -13,7 +13,6 @@ export default function Home() {
   const { refreshCoins } = useCoinsRefresh();
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [sessionReady, setSessionReady] = useState(false);
-  const [credits, setCredits] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +35,6 @@ export default function Home() {
         sessionId: sessionResult.session_id,
         credits: sessionResult.credits_remaining,
       });
-      
-      setCredits(sessionResult.credits_remaining);
       setSessionReady(true);
     } catch (error) {
       console.error('❌ Session initialization failed:', error);
@@ -237,11 +234,6 @@ export default function Home() {
             </div>
           )}
           
-          {sessionReady && credits !== null && (
-            <div className="text-center text-secondary-500 text-xs">
-              Credits remaining: {credits}
-            </div>
-          )}
           
           {/* Debug info - commented out for production
           <div className="text-center text-sm bg-yellow-100 p-2 rounded mt-2">
