@@ -130,15 +130,13 @@ export default function Home() {
                   sessionStorage.setItem(`chat-${conversationId}`, JSON.stringify(initialMessages));
                   console.log('💾 Stored initial messages in sessionStorage');
                   
-                  // Refresh coins display after successful message send
-                  console.log('🔄 Refreshing coins display...');
-                  refreshCoins();
-                  
-                  // Redirect to chat page with a slight delay
+                  // Navigate immediately without waiting for coins refresh
                   console.log('🔄 Navigating to chat page:', `/chat/${conversationId}`);
-                  setTimeout(() => {
-                    router.push(`/chat/${conversationId}`);
-                  }, 300);
+                  router.push(`/chat/${conversationId}`);
+                  
+                  // Refresh coins display in background (non-blocking)
+                  console.log('🔄 Refreshing coins display in background...');
+                  refreshCoins();
                 } else {
                   console.log('⚠️ No conversation ID found in response');
                   console.log('Response headers:', Object.fromEntries(response.headers.entries()));

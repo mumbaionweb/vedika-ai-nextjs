@@ -37,10 +37,18 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     { id: 'agents', label: 'Agents', icon: Sparkles },
   ];
 
-  // Initialize session on mount
+  // Initialize session on mount - optimized to skip if session exists
   useEffect(() => {
     async function initSession() {
       try {
+        // Quick check: if we have a session ID, assume it's valid (saves ~200-300ms)
+        const existingSessionId = DeviceManager.getSessionId();
+        if (existingSessionId) {
+          console.log('⚡ [CHAT PAGE] Using existing session:', existingSessionId);
+          setSessionReady(true);
+          return;
+        }
+        
         console.log('🚀 [CHAT PAGE] Initializing vedika-ai session...');
         const session = await DeviceSessionApi.ensureSession();
         console.log('✅ [CHAT PAGE] Session ready:', {
@@ -114,8 +122,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         };
         setMessages(prev => [...prev, assistantMessage]);
         
-        // Refresh coins display after successful message send
-        console.log('🔄 [CHAT PAGE] Refreshing coins display...');
+        // Refresh coins display in background (non-blocking)
+        console.log('🔄 [CHAT PAGE] Refreshing coins display in background...');
         refreshCoins();
       } else {
         const errorText = await response.text();
