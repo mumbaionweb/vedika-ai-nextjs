@@ -56,11 +56,11 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex items-center justify-center h-full bg-white pt-16 pb-8">
-      <div className="w-full max-w-3xl">
+    <div className="flex justify-center h-full bg-white pt-8 pb-8">
+      <div className="w-full max-w-3xl mt-16">
         {/* Logo */}
-        <div className="text-center mb-6">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 bg-clip-text text-transparent mb-3">
+        <div className="text-center mb-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 bg-clip-text text-transparent mb-2">
             V.ai
           </h1>
           <p className="text-secondary-600 text-lg">
