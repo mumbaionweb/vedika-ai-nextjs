@@ -56,7 +56,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex justify-center h-full bg-white pt-16 pb-8">
+    <div className="flex justify-center h-full bg-white pt-24 pb-8">
       <div className="w-full max-w-3xl">
         {/* Logo */}
         <div className="text-center mb-4">
