@@ -10,11 +10,11 @@ interface VedikaCoinsProps {
 
 export default function VedikaCoins({ used, total, className = '' }: VedikaCoinsProps) {
   return (
-    <div className={`flex items-center gap-3 bg-white rounded-full px-4 py-2 shadow-sm border border-gray-200 ${className}`}>
+    <div className={`flex items-center gap-2 bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-200 ${className}`}>
       {/* Golden Coin with Shining Animation */}
       <div className="relative">
-        <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
-          <span className="text-white font-bold text-sm">V</span>
+        <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
+          <span className="text-white font-bold text-xs">V</span>
           
           {/* Shining effect overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 rounded-full animate-ping"></div>
@@ -25,12 +25,12 @@ export default function VedikaCoins({ used, total, className = '' }: VedikaCoins
         </div>
         
         {/* Glow effect */}
-        <div className="absolute inset-0 w-8 h-8 bg-yellow-400 rounded-full opacity-20 blur-sm animate-pulse"></div>
+        <div className="absolute inset-0 w-6 h-6 bg-yellow-400 rounded-full opacity-20 blur-sm animate-pulse"></div>
       </div>
       
       {/* Usage Display */}
       <div className="flex flex-col">
-        <span className="text-sm font-semibold text-gray-800">
+        <span className="text-xs font-semibold text-gray-800">
           {used}/{total}
         </span>
       </div>
