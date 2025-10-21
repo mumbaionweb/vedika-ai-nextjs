@@ -113,11 +113,14 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
         console.log('📖 [CHAT PAGE] Loading conversation history from API for:', chatId);
         
-        const data = await apiService.getConversation(chatId, {
-          device_id: DeviceManager.getDeviceId(),
-          session_id: DeviceManager.getSessionId(),
-          request_type: 'anonymous',
-        });
+        const result = await apiService.getConversation(chatId);
+        
+        if (!result.success) {
+          console.error('❌ [CHAT PAGE] API error:', result.error);
+          return;
+        }
+        
+        const data = result.data;
 
         console.log('✅ [CHAT PAGE] History loaded from API:', {
           messageCount: data.messages?.length || 0,
