@@ -239,7 +239,7 @@ export default function Home() {
           
           {/* Debug info */}
           <div className="text-center text-sm bg-yellow-100 p-2 rounded mt-2">
-            <strong>Debug:</strong> sessionReady={sessionReady ? 'true' : 'false'}, inputValue="{inputValue}", inputValue.trim()="{inputValue?.trim()}", isLoading={isLoading ? 'true' : 'false'}
+            <strong>Debug:</strong> sessionReady={sessionReady ? 'true' : 'false'}, inputValue=&quot;{inputValue}&quot;, inputValue.trim()=&quot;{inputValue?.trim()}&quot;, isLoading={isLoading ? 'true' : 'false'}
             <br />
             <strong>Button disabled because:</strong> {
               isLoading ? 'isLoading=true' : 
