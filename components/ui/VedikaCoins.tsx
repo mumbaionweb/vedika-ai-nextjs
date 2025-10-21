@@ -2,13 +2,17 @@
 
 import React from 'react';
 import { useCoins } from '../../hooks/useCoins';
+import { useCoinsRefreshCallback } from '@/contexts/CoinsContext';
 
 interface VedikaCoinsProps {
   className?: string;
 }
 
 export default function VedikaCoins({ className = '' }: VedikaCoinsProps) {
-  const { usedCredits, totalCredits, loading, error } = useCoins();
+  const { usedCredits, totalCredits, loading, error, refetch } = useCoins();
+  
+  // Register for global refresh events
+  useCoinsRefreshCallback(refetch);
 
   // Show loading state
   if (loading) {

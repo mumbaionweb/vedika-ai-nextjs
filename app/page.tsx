@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
+import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { Search, FileText, Sparkles, Send } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
+  const { refreshCoins } = useCoinsRefresh();
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [sessionReady, setSessionReady] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
@@ -130,6 +132,10 @@ export default function Home() {
                   ];
                   sessionStorage.setItem(`chat-${conversationId}`, JSON.stringify(initialMessages));
                   console.log('💾 Stored initial messages in sessionStorage');
+                  
+                  // Refresh coins display after successful message send
+                  console.log('🔄 Refreshing coins display...');
+                  refreshCoins();
                   
                   // Redirect to chat page with a slight delay
                   console.log('🔄 Navigating to chat page:', `/chat/${conversationId}`);

@@ -4,6 +4,7 @@ import { useEffect, useRef, use, useState } from 'react';
 import { apiService } from '@/lib/services/api';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
+import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import type { Message } from '@/lib/types/api';
 import { Send } from 'lucide-react';
 
@@ -15,6 +16,7 @@ interface ChatPageProps {
 
 export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = use(params);
+  const { refreshCoins } = useCoinsRefresh();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasLoadedHistoryRef = useRef(false);
 
@@ -102,6 +104,10 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           timestamp: new Date().toISOString(),
         };
         setMessages(prev => [...prev, assistantMessage]);
+        
+        // Refresh coins display after successful message send
+        console.log('🔄 [CHAT PAGE] Refreshing coins display...');
+        refreshCoins();
       } else {
         const errorText = await response.text();
         console.error('❌ [CHAT PAGE] Failed to send message:', response.status, errorText);
