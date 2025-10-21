@@ -11,7 +11,8 @@ export interface DeviceSession {
 
 // Message Types
 export interface Message {
-  message_id: string;
+  message_id?: string; // From backend
+  id?: string; // For frontend usage
   role: 'user' | 'assistant';
   content: string;
   timestamp: string; // Backend sends 'timestamp' field
