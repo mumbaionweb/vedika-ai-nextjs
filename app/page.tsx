@@ -6,6 +6,7 @@ import { useChat } from '@ai-sdk/react';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
+import { config } from '@/lib/config';
 import { Search, FileText, Sparkles, Send } from 'lucide-react';
 
 export default function Home() {
@@ -85,8 +86,8 @@ export default function Home() {
               console.log('🔍 Device ID:', DeviceManager.getDeviceId());
               console.log('🔍 Session ID:', DeviceManager.getSessionId());
               
-              // Make API call directly to AWS
-              const response = await fetch('https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod/ai/chat', {
+              // Make API call to Vedika API
+              const response = await fetch(`${config.api.baseUrl}/ai/chat`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

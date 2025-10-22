@@ -6,8 +6,8 @@
 
 export const config = {
   api: {
-    // Use production API for development (recommended by backend team)
-    baseUrl: 'https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod',
+    // Production API endpoint
+    baseUrl: 'https://api.vedika.ai.in',
     websocketUrl: 'wss://wa33d8dcw2.execute-api.ap-south-1.amazonaws.com/prod',
     timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000'),
   },

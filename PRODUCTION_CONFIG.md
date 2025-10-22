@@ -8,7 +8,7 @@ To deploy this application to production, ensure the following environment varia
 
 ```bash
 # API Configuration
-NEXT_PUBLIC_API_BASE_URL=https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod
+NEXT_PUBLIC_API_BASE_URL=https://api.vedika.ai.in/Prod
 NEXT_PUBLIC_WEBSOCKET_URL=wss://wa33d8dcw2.execute-api.ap-south-1.amazonaws.com/prod
 
 # Environment

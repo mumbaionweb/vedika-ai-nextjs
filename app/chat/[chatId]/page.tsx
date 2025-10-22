@@ -5,6 +5,7 @@ import { apiService } from '@/lib/services/api';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
+import { config } from '@/lib/config';
 import type { Message } from '@/lib/types/api';
 import { Send, Search, FileText, Sparkles } from 'lucide-react';
 
@@ -92,8 +93,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     try {
       console.log('📤 [CHAT PAGE] Submitting message:', userMessage);
       
-      // Make API call directly to AWS
-      const response = await fetch('https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod/ai/chat', {
+      // Make API call to Vedika API
+      const response = await fetch(`${config.api.baseUrl}/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

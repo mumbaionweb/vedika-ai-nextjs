@@ -69,7 +69,7 @@ interface DeviceSessionResponse {
 - `NEXT_PUBLIC_API_TIMEOUT=30000` - API timeout (optional)
 
 ### API Endpoints
-- **Production**: `https://9blg9pjpfc.execute-api.ap-south-1.amazonaws.com/Prod`
+- **Production**: `https://api.vedika.ai.in/Prod`
 - **Local Dev**: `http://localhost:8002` (when backend is running)
 
 ## 🚀 Usage
