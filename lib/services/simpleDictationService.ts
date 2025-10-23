@@ -199,6 +199,17 @@ export class SimpleDictationService {
       const settings = track.getSettings();
       console.log('🎤 Audio settings:', settings);
       
+      // Stop any existing recognition first
+      if (this.recognition && this.isListening) {
+        console.log('🛑 Stopping existing recognition before starting new one...');
+        this.recognition.stop();
+        this.isListening = false;
+        this.hasStartedListening = false;
+        
+        // Wait a bit for the recognition to fully stop
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
       // Start recognition
       console.log('🎤 About to start recognition...');
       this.recognition.start();
