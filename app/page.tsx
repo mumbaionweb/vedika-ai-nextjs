@@ -11,7 +11,7 @@ import { unifiedDictationService } from '@/lib/services/unifiedDictationService'
 import { InteractionService } from '@/lib/services/interactionService';
 import { checkBrowserSupport } from '@/lib/utils/browserSupport';
 import { VoiceService } from '@/lib/services/voiceService';
-import { AWSTranscribeService } from '@/lib/services/awsTranscribeService';
+import { useSpeechRecognition } from '@/lib/hooks/useSpeechRecognition';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
 
@@ -33,8 +33,14 @@ export default function Home() {
   const [interactionService] = useState(() => new InteractionService());
   const [voiceService] = useState(() => new VoiceService());
   
-  // ✅ Use useRef to create AWS Transcribe service only once
-  const awsTranscribeServiceRef = useRef<AWSTranscribeService | null>(null);
+  // ✅ Use Web Speech API hook
+  const {
+    transcript: speechTranscript,
+    isListening,
+    startListening,
+    stopListening,
+    hasRecognitionSupport,
+  } = useSpeechRecognition();
 
   // Remove useChat hook since we're not using it anymore
 
@@ -49,42 +55,14 @@ export default function Home() {
     console.log('🔄 State changed - inputValue:', inputValue, 'dictationTranscript:', dictationTranscript);
   }, [inputValue, dictationTranscript]);
 
-  // Initialize AWS Transcribe service once
+  // Handle speech recognition transcript updates
   useEffect(() => {
-    if (!awsTranscribeServiceRef.current) {
-      awsTranscribeServiceRef.current = new AWSTranscribeService();
-      
-      // Set callbacks
-      awsTranscribeServiceRef.current.onTranscript = (text: string, isPartial: boolean) => {
-        console.log(isPartial ? '📝 Interim result:' : '✅ Final result:', text);
-        if (isPartial) {
-          setDictationTranscript(text);
-        } else {
-          setInputValue(text);
-          setDictationTranscript('');
-          setIsDictating(false);
-          console.log('✅ AWS Transcribe completed. User can now submit the message.');
-        }
-      };
-      
-      awsTranscribeServiceRef.current.onError = (error: string) => {
-        console.error('❌ AWS Transcribe error:', error);
-        setIsDictating(false);
-        setDictationTranscript('');
-      };
-      
-      awsTranscribeServiceRef.current.onStart = () => {
-        console.log('🎤 AWS Transcribe service started');
-        setDictationTranscript('Listening...');
-      };
-      
-      awsTranscribeServiceRef.current.onEnd = () => {
-        console.log('🎤 AWS Transcribe service ended');
-        setIsDictating(false);
-        setDictationTranscript('');
-      };
+    if (speechTranscript) {
+      console.log('📝 Speech transcript updated:', speechTranscript);
+      setDictationTranscript(speechTranscript);
+      setInputValue(speechTranscript);
     }
-  }, []); // Empty dependency array - run only once
+  }, [speechTranscript]);
 
   async function initializeSession() {
     try {
@@ -140,29 +118,20 @@ export default function Home() {
     setDictationTranscript('');
     setInputValue('');
     
-    console.log('Starting AWS Transcribe...');
-    if (awsTranscribeServiceRef.current) {
-      const success = await awsTranscribeServiceRef.current.startRealTimeTranscription();
-      console.log('AWS Transcribe start result:', success);
-      
-      if (success) {
-        console.log('🎤 AWS Transcribe started');
-        setIsDictating(true);
-      } else {
-        console.error('🎤 Failed to start AWS Transcribe');
-        setIsDictating(false);
-      }
+    console.log('Starting Web Speech API...');
+    if (hasRecognitionSupport) {
+      startListening();
+      setIsDictating(true);
+      console.log('🎤 Web Speech API started');
     } else {
-      console.error('❌ AWS Transcribe service not initialized');
+      console.error('❌ Web Speech API not supported in this browser');
       setIsDictating(false);
     }
   };
 
   const handleDictationStop = () => {
-    console.log('🛑 Stopping AWS Transcribe...');
-    if (awsTranscribeServiceRef.current) {
-      awsTranscribeServiceRef.current.stopTranscription();
-    }
+    console.log('🛑 Stopping Web Speech API...');
+    stopListening();
     setIsDictating(false);
     setDictationTranscript('');
   };
