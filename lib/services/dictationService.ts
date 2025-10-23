@@ -106,6 +106,11 @@ export class DictationService {
       this.recognition.onnomatch = (event: any) => {
         console.log('🎤 No speech match detected:', event);
         console.log('🎤 This means speech was detected but not recognized');
+        console.log('🎤 Event details:', {
+          type: event.type,
+          timeStamp: event.timeStamp,
+          isTrusted: event.isTrusted
+        });
       };
       
       // Add debugging for audio events
@@ -131,6 +136,15 @@ export class DictationService {
       
       this.recognition.onspeechend = () => {
         console.log('🎤 Speech ended');
+        console.log('🎤 Speech ended - checking for results...');
+        
+        // Add a small delay to see if results come after speech ends
+        setTimeout(() => {
+          console.log('🎤 Speech ended - checking recognition state:', {
+            isListening: this.isListening,
+            recognitionState: this.recognition.state
+          });
+        }, 100);
       };
       
       // Handle recognition errors
@@ -176,6 +190,7 @@ export class DictationService {
       this.recognition.onend = () => {
         console.log('🎤 Speech recognition ended');
         console.log('🎤 Recognition state after end:', this.recognition.state);
+        console.log('🎤 Recognition ended - checking if any results were processed');
         this.isListening = false;
         if (this.callbacks.onEnd) {
           this.callbacks.onEnd();
