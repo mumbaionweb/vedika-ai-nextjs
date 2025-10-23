@@ -11,6 +11,7 @@ import { unifiedDictationService } from '@/lib/services/unifiedDictationService'
 import { InteractionService } from '@/lib/services/interactionService';
 import { checkBrowserSupport } from '@/lib/utils/browserSupport';
 import { VoiceService } from '@/lib/services/voiceService';
+import { SimpleDictationService } from '@/lib/services/simpleDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
 
@@ -31,6 +32,7 @@ export default function Home() {
   const [dictationTranscript, setDictationTranscript] = useState('');
   const [interactionService] = useState(() => new InteractionService());
   const [voiceService] = useState(() => new VoiceService());
+  const [dictationService] = useState(() => new SimpleDictationService());
 
   // Remove useChat hook since we're not using it anymore
 
@@ -44,6 +46,30 @@ export default function Home() {
   useEffect(() => {
     console.log('🔄 State changed - inputValue:', inputValue, 'dictationTranscript:', dictationTranscript);
   }, [inputValue, dictationTranscript]);
+
+  // Set up dictation service callbacks
+  useEffect(() => {
+    dictationService.onInterimResult = (text: string) => {
+      console.log('📝 Interim result:', text);
+      setDictationTranscript(text);
+    };
+    
+    dictationService.onFinalResult = (text: string) => {
+      console.log('✅ Final result:', text);
+      setInputValue(text);
+      setDictationTranscript('');
+      setIsDictating(false);
+      
+      // The user can manually submit the message or it will be submitted automatically
+      console.log('✅ Dictation completed. User can now submit the message.');
+    };
+    
+    dictationService.onError = (error: string) => {
+      console.error('❌ Dictation error:', error);
+      setIsDictating(false);
+      setDictationTranscript('');
+    };
+  }, [dictationService]);
 
   async function initializeSession() {
     try {
@@ -90,64 +116,30 @@ export default function Home() {
     console.log('🎤 Dictation start clicked');
     console.log('Current state:', { isDictating, isVoiceMode, interactionMode, isTyping });
     
-    // Initialize the unified service with device ID
-    const deviceId = DeviceManager.getDeviceId();
-    const dictationService = new (await import('@/lib/services/unifiedDictationService')).UnifiedDictationService(deviceId);
-    
-    console.log('Dictation service supported:', dictationService.isSupported());
-    console.log('Service type:', dictationService.getServiceType());
-    
-    if (!dictationService.isSupported()) {
-      console.error('Speech recognition not supported');
-      setError('Speech recognition is not supported in this browser');
-      return;
+    // Stop any active voice mode
+    if (isVoiceMode) {
+      handleVoiceStop();
     }
-
-    console.log('Starting dictation...');
+    
     setIsDictating(true);
     setDictationTranscript('');
     setInputValue('');
-
-    // Set up callbacks
-    dictationService.setCallbacks({
-      onInterimResult: (transcript: string) => {
-        console.log('🎤 Interim result:', transcript);
-        setDictationTranscript(transcript);
-      },
-      onFinalResult: (transcript: string) => {
-        console.log('🎤 Final result:', transcript);
-        setDictationTranscript(transcript);
-        setInputValue(transcript);
-        handleDictationStop();
-      },
-      onError: (error: string) => {
-        console.error('🎤 Dictation error:', error);
-        setError(error);
-        setIsDictating(false);
-      },
-      onStart: () => {
-        console.log('🎤 Dictation started');
-        setIsDictating(true);
-        setInteractionMode('dictation');
-      },
-      onEnd: () => {
-        console.log('🎤 Dictation ended');
-        setIsDictating(false);
-      }
-    });
-
-    try {
-      const success = await dictationService.startListening();
-      console.log('Dictation start result:', success);
-    } catch (error) {
-      console.error('🎤 Failed to start dictation:', error);
+    
+    console.log('Starting dictation...');
+    const success = await dictationService.startListening();
+    console.log('Dictation start result:', success);
+    
+    if (success) {
+      console.log('🎤 Dictation started');
+    } else {
+      console.error('🎤 Failed to start dictation');
       setIsDictating(false);
     }
   };
 
   const handleDictationStop = () => {
-    // We'll need to store the service instance to stop it
-    // For now, just update the state
+    console.log('🛑 Stopping dictation...');
+    dictationService.stopListening();
     setIsDictating(false);
     setDictationTranscript('');
   };

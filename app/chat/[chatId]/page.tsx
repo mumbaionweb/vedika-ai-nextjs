@@ -8,6 +8,7 @@ import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
 import { unifiedDictationService } from '@/lib/services/unifiedDictationService';
 import { VoiceService } from '@/lib/services/voiceService';
+import { SimpleDictationService } from '@/lib/services/simpleDictationService';
 import type { Message } from '@/lib/types/api';
 import { Send, Search, FileText, Sparkles, Type, Mic, MessageCircle } from 'lucide-react';
 
@@ -40,6 +41,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [dictationTranscript, setDictationTranscript] = useState('');
   const [voiceService] = useState(() => new VoiceService());
+  const [dictationService] = useState(() => new SimpleDictationService());
 
   // Agent definitions
   const agents = [
