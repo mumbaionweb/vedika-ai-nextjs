@@ -30,6 +30,10 @@ export class SimpleDictationService {
         maxAlternatives: this.recognition.maxAlternatives
       });
       
+      // Try different language settings
+      this.recognition.lang = 'en-US';
+      console.log('🎤 Set language to en-US');
+      
       console.log('✅ Speech Recognition initialized');
       
       this.recognition.onstart = () => {
@@ -83,6 +87,16 @@ export class SimpleDictationService {
           this.onFinalResult?.(finalTranscript);
         }
       };
+      
+      // Add debugging to check if onresult is being called at all
+      console.log('🔍 Setting up onresult listener...');
+      setTimeout(() => {
+        console.log('🔍 Checking if onresult was called after 8 seconds...');
+        if (this.onInterimResult) {
+          console.log('🧪 TEST: Manually calling onInterimResult to test callback system...');
+          this.onInterimResult('Manual test result');
+        }
+      }, 8000);
       
       this.recognition.onerror = (event: any) => {
         console.error('❌ Speech recognition error:', event.error);
