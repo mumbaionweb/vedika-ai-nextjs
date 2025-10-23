@@ -8,6 +8,11 @@ export class SimpleDictationService {
   private isListening = false;
 
   constructor() {
+    // Only initialize on client side
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (SpeechRecognition) {
@@ -63,6 +68,11 @@ export class SimpleDictationService {
   }
 
   async startListening(): Promise<boolean> {
+    if (typeof window === 'undefined') {
+      console.error('❌ Speech Recognition not available on server side');
+      return false;
+    }
+    
     if (!this.recognition) {
       console.error('❌ Speech Recognition not available');
       return false;
@@ -120,6 +130,9 @@ export class SimpleDictationService {
   }
 
   isSupported(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
+    }
     return !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition;
   }
 
