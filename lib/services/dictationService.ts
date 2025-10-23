@@ -57,23 +57,7 @@ export class DictationService {
       console.log('🎤 Trying different language settings...');
       this.recognition.lang = 'en-US';
       
-      // Add timeout to force result processing
-      setTimeout(() => {
-        if (this.isListening && this.recognition) {
-          console.log('🎤 Forcing recognition to process results...');
-          // Try to manually trigger result processing
-          try {
-            this.recognition.stop();
-            setTimeout(() => {
-              if (this.recognition) {
-                this.recognition.start();
-              }
-            }, 100);
-          } catch (error) {
-            console.log('🎤 Error forcing recognition restart:', error);
-          }
-        }
-      }, 5000);
+      // Remove forced restart - it's causing the abort issue
       
       console.log('🎤 Recognition configured with settings');
       
@@ -234,6 +218,13 @@ export class DictationService {
         // Set up audio monitoring for speech recognition
         this.setupAudioMonitoring();
         
+        // Add protection against immediate abort
+        setTimeout(() => {
+          if (this.isListening) {
+            console.log('🎤 Recognition is stable and ready for speech input');
+          }
+        }, 1000);
+        
         if (this.callbacks.onStart) {
           this.callbacks.onStart();
         }
@@ -358,25 +349,13 @@ export class DictationService {
       if (this.recognition && this.recognition.state === 'listening') {
         console.log('🎤 Stopping existing recognition first');
         this.recognition.stop();
+        // Wait longer for clean shutdown to prevent race condition
+        setTimeout(() => {
+          this.startRecognition();
+        }, 500);
+      } else {
+        this.startRecognition();
       }
-      
-      // Small delay to ensure previous recognition is stopped
-      setTimeout(() => {
-        try {
-          console.log('🎤 Attempting to start recognition...');
-          console.log('🎤 Recognition before start:', {
-            state: this.recognition.state,
-            readyState: (this.recognition as any).readyState,
-            continuous: this.recognition.continuous,
-            interimResults: this.recognition.interimResults
-          });
-          
-          this.recognition.start();
-          console.log('🎤 Speech recognition started successfully');
-          console.log('🎤 Recognition after start:', {
-            state: this.recognition.state,
-            readyState: (this.recognition as any).readyState
-          });
           
           // Add timeout to detect if recognition is hanging
           setTimeout(() => {
@@ -579,6 +558,39 @@ export class DictationService {
   public setLanguage(language: string): void {
     if (this.recognition) {
       this.recognition.lang = language;
+    }
+  }
+
+  /**
+   * Start speech recognition with proper error handling
+   */
+  private startRecognition(): void {
+    if (!this.recognition) {
+      console.error('🎤 No recognition instance available');
+      return;
+    }
+
+    try {
+      console.log('🎤 Attempting to start recognition...');
+      console.log('🎤 Recognition before start:', {
+        state: this.recognition.state,
+        readyState: (this.recognition as any).readyState,
+        continuous: this.recognition.continuous,
+        interimResults: this.recognition.interimResults
+      });
+      
+      this.recognition.start();
+      console.log('🎤 Speech recognition started successfully');
+      console.log('🎤 Recognition after start:', {
+        state: this.recognition.state,
+        readyState: (this.recognition as any).readyState
+      });
+    } catch (error) {
+      console.error('🎤 Error starting speech recognition:', error);
+      this.isListening = false;
+      if (this.callbacks.onError) {
+        this.callbacks.onError(error);
+      }
     }
   }
 
