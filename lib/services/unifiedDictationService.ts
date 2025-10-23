@@ -1,5 +1,6 @@
 import { EnhancedDictationService } from './enhancedDictationService';
 import { MobileDictationService } from './mobileDictationService';
+import { StreamingDictationService } from './streamingDictationService';
 
 /**
  * Unified service that works on all devices
@@ -7,6 +8,7 @@ import { MobileDictationService } from './mobileDictationService';
 export class UnifiedDictationService {
   private speechService: EnhancedDictationService;
   private mobileService: MobileDictationService;
+  private streamingService: StreamingDictationService;
   private isMobile = false;
   private deviceId: string;
 
@@ -21,6 +23,7 @@ export class UnifiedDictationService {
     this.deviceId = deviceId;
     this.speechService = new EnhancedDictationService();
     this.mobileService = new MobileDictationService(deviceId);
+    this.streamingService = new StreamingDictationService();
     
     // Detect mobile browser
     this.isMobile = this.detectMobileBrowser();
@@ -35,8 +38,11 @@ export class UnifiedDictationService {
            window.innerWidth < 768; // Also consider small screens as mobile
   }
 
-  async startListening(): Promise<boolean> {
-    if (this.isMobile) {
+  async startListening(mode: 'dictation' | 'voice' = 'dictation'): Promise<boolean> {
+    if (mode === 'voice') {
+      // Use streaming service for voice mode
+      return await this.streamingService.startStreaming();
+    } else if (this.isMobile) {
       return await this.mobileService.startRecording();
     } else {
       return await this.speechService.startListening();
@@ -44,11 +50,10 @@ export class UnifiedDictationService {
   }
 
   stopListening(): void {
-    if (this.isMobile) {
-      this.mobileService.stopRecording();
-    } else {
-      this.speechService.stopListening();
-    }
+    // Stop all services to be safe
+    this.mobileService.stopRecording();
+    this.speechService.stopListening();
+    this.streamingService.stopStreaming();
   }
 
   setCallbacks(callbacks: {
@@ -64,7 +69,7 @@ export class UnifiedDictationService {
     this.onStart = callbacks.onStart;
     this.onEnd = callbacks.onEnd;
 
-    // Set callbacks for both services
+    // Set callbacks for all services
     this.speechService.onInterimResult = callbacks.onInterimResult;
     this.speechService.onFinalResult = callbacks.onFinalResult;
     this.speechService.onError = callbacks.onError;
@@ -76,6 +81,9 @@ export class UnifiedDictationService {
     this.mobileService.onError = callbacks.onError;
     this.mobileService.onStart = callbacks.onStart;
     this.mobileService.onEnd = callbacks.onEnd;
+
+    this.streamingService.onInterimResult = callbacks.onInterimResult;
+    this.streamingService.onFinalResult = callbacks.onFinalResult;
   }
 
   getIsListening(): boolean {

@@ -8,6 +8,8 @@ import { DeviceManager } from '@/lib/utils/deviceManager';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
 import { unifiedDictationService } from '@/lib/services/unifiedDictationService';
+import { InteractionService } from '@/lib/services/interactionService';
+import { checkBrowserSupport } from '@/lib/utils/browserSupport';
 import { voiceService } from '@/lib/services/voiceService';
 import { BrowserSupport } from '@/lib/utils/browserSupport';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
@@ -28,12 +30,14 @@ export default function Home() {
   const [isDictating, setIsDictating] = useState(false);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [dictationTranscript, setDictationTranscript] = useState('');
+  const [interactionService] = useState(() => new InteractionService());
 
   // Remove useChat hook since we're not using it anymore
 
   // Initialize device session on mount
   useEffect(() => {
     initializeSession();
+    checkBrowserSupport();
   }, []);
 
   // Debug state changes

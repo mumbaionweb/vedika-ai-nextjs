@@ -1,108 +1,43 @@
 /**
- * Enhanced dictation service with noise cancellation
+ * Enhanced Dictation Service
+ * Uses AWS SDK v3 for production-grade speech recognition with noise cancellation
  */
-export class EnhancedDictationService {
-  private recognition: SpeechRecognition | null = null;
-  private isListening = false;
 
-  // Callbacks
-  onInterimResult?: (text: string) => void;
-  onFinalResult?: (text: string) => void;
-  onError?: (error: string) => void;
-  onStart?: () => void;
-  onEnd?: () => void;
+import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+export class EnhancedDictationService {
+  private transcribeClient: TranscribeClient;
+  private s3Client: S3Client;
+  private bucketName: string;
+  private isListening: boolean = false;
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
 
   constructor() {
-    this.initializeSpeechRecognition();
-  }
-
-  private initializeSpeechRecognition() {
-    if (typeof window === 'undefined') {
-      console.warn('🎤 Running on server side, skipping speech recognition initialization');
-      return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    // Initialize AWS clients with proper configuration
+    this.transcribeClient = new TranscribeClient({
+      region: 'ap-south-1',
+      credentials: {
+        accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY || '',
+      }
+    });
     
-    if (!SpeechRecognition) {
-      console.warn('🎤 Speech Recognition not supported, using fallback');
-      return;
-    }
-
-    this.recognition = new SpeechRecognition();
-    this.recognition.continuous = false;
-    this.recognition.interimResults = true;
-    this.recognition.lang = 'en-US';
-    this.recognition.maxAlternatives = 1;
-
-    // Enhanced error handling
-    this.recognition.onerror = (event: any) => {
-      console.error('🎤 Speech recognition error:', event.error);
-      
-      switch (event.error) {
-        case 'aborted':
-          console.log('🎤 Recognition aborted - this is normal when stopping');
-          break;
-        case 'not-allowed':
-          console.error('🎤 Microphone permission denied');
-          if (this.onError) this.onError('Microphone permission denied');
-          break;
-        case 'no-speech':
-          console.warn('🎤 No speech detected');
-          if (this.onError) this.onError('No speech detected');
-          break;
-        case 'audio-capture':
-          console.error('🎤 Audio capture failed');
-          if (this.onError) this.onError('Audio capture failed');
-          break;
-        case 'network':
-          console.error('🎤 Network error');
-          if (this.onError) this.onError('Network error');
-          break;
-        default:
-          console.error('🎤 Unknown error:', event.error);
-          if (this.onError) this.onError(`Unknown error: ${event.error}`);
+    this.s3Client = new S3Client({
+      region: 'ap-south-1',
+      credentials: {
+        accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY || '',
       }
-    };
-
-    this.recognition.onresult = (event: any) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        } else {
-          interimTranscript += transcript;
-        }
-      }
-
-      if (interimTranscript && this.onInterimResult) {
-        this.onInterimResult(interimTranscript);
-      }
-
-      if (finalTranscript && this.onFinalResult) {
-        this.onFinalResult(finalTranscript);
-      }
-    };
-
-    this.recognition.onstart = () => {
-      console.log('🎤 Speech recognition started');
-      this.isListening = true;
-      if (this.onStart) this.onStart();
-    };
-
-    this.recognition.onend = () => {
-      console.log('🎤 Speech recognition ended');
-      this.isListening = false;
-      if (this.onEnd) this.onEnd();
-    };
+    });
+    
+    this.bucketName = process.env.NEXT_PUBLIC_AUDIO_BUCKET || 'vedika-audio-temp';
   }
 
   async startListening(): Promise<boolean> {
-    if (!this.recognition) {
-      console.error('🎤 Speech Recognition not available');
+    if (this.isListening) {
+      console.warn('🎤 Already listening');
       return false;
     }
 
@@ -120,31 +55,79 @@ export class EnhancedDictationService {
 
       console.log('🎤 Microphone access granted with noise cancellation');
       
-      // Start speech recognition
-      this.recognition.start();
+      // Create MediaRecorder with noise cancellation
+      this.mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
+      this.audioChunks = [];
+      
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.audioChunks.push(event.data);
+        }
+      };
+      
+      this.mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        await this.processAudioWithAWS(audioBlob);
+      };
+      
+      this.mediaRecorder.start(1000); // Collect data every second
       this.isListening = true;
       
+      console.log('🎤 Dictation started with noise cancellation');
       return true;
 
     } catch (error) {
       console.error('🎤 Failed to start listening:', error);
-      if (this.onError) this.onError('Failed to start listening');
       return false;
     }
   }
 
   stopListening(): void {
-    if (this.recognition && this.isListening) {
-      this.recognition.stop();
+    if (this.mediaRecorder && this.isListening) {
+      this.mediaRecorder.stop();
       this.isListening = false;
+      console.log('🎤 Dictation stopped');
     }
   }
 
-  getIsListening(): boolean {
-    return this.isListening;
+  private async processAudioWithAWS(audioBlob: Blob): Promise<void> {
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Audio = reader.result?.toString().split(',')[1];
+        
+        if (!base64Audio) return;
+
+        // Send to backend for processing
+        const response = await fetch('/api/dictation/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio_data: base64Audio,
+            audio_format: 'webm',
+            language_code: 'en-US',
+            enable_noise_cancellation: true
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.status === 'completed') {
+          this.onFinalResult?.(result.transcribed_text);
+        }
+      };
+      
+      reader.readAsDataURL(audioBlob);
+
+    } catch (error) {
+      console.error('🎤 AWS processing failed:', error);
+    }
   }
 
-  isSupported(): boolean {
-    return this.recognition !== null;
-  }
+  // Callbacks
+  onFinalResult?: (text: string) => void;
 }

@@ -1,104 +1,56 @@
 /**
- * Browser Support Utilities
- * Check for various browser capabilities
+ * Browser Support Utility
+ * Detects browser capabilities for dictation and voice features
  */
 
-export const BrowserSupport = {
-  /**
-   * Check if Speech Recognition is supported
-   */
-  isSpeechRecognitionSupported(): boolean {
-    if (typeof window === 'undefined') return false;
-    
-    return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-  },
+export const checkBrowserSupport = () => {
+  const capabilities = {
+    speechRecognition: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+    mediaRecorder: !!window.MediaRecorder,
+    getUserMedia: !!navigator.mediaDevices?.getUserMedia,
+    audioContext: !!window.AudioContext,
+    websockets: !!window.WebSocket
+  };
 
-  /**
-   * Check if MediaDevices (microphone) is supported
-   */
-  isMediaDevicesSupported(): boolean {
-    if (typeof window === 'undefined') return false;
-    
-    return 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices;
-  },
+  console.log('🔍 Browser capabilities:', capabilities);
+  return capabilities;
+};
 
-  /**
-   * Check if Web Audio API is supported
-   */
-  isWebAudioSupported(): boolean {
-    if (typeof window === 'undefined') return false;
-    
-    return 'AudioContext' in window || 'webkitAudioContext' in window;
-  },
-
-  /**
-   * Get browser info
-   */
-  getBrowserInfo(): { name: string; version: string; userAgent: string } {
-    if (typeof window === 'undefined') {
-      return { name: 'Server', version: 'Unknown', userAgent: 'Server-side' };
-    }
-
-    const userAgent = navigator.userAgent;
-    let browserName = 'Unknown';
-    let browserVersion = 'Unknown';
-
-    // Chrome
-    if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
-      browserName = 'Chrome';
-      const match = userAgent.match(/Chrome\/(\d+)/);
-      if (match) browserVersion = match[1];
-    }
-    // Firefox
-    else if (userAgent.includes('Firefox')) {
-      browserName = 'Firefox';
-      const match = userAgent.match(/Firefox\/(\d+)/);
-      if (match) browserVersion = match[1];
-    }
-    // Safari
-    else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-      browserName = 'Safari';
-      const match = userAgent.match(/Version\/(\d+)/);
-      if (match) browserVersion = match[1];
-    }
-    // Edge
-    else if (userAgent.includes('Edg')) {
-      browserName = 'Edge';
-      const match = userAgent.match(/Edg\/(\d+)/);
-      if (match) browserVersion = match[1];
-    }
-
-    return { name: browserName, version: browserVersion, userAgent };
-  },
-
-  /**
-   * Check if HTTPS is required for microphone access
-   */
-  isHTTPSRequired(): boolean {
-    if (typeof window === 'undefined') return false;
-    
-    return window.location.protocol !== 'https:' && window.location.hostname !== 'localhost';
-  },
-
-  /**
-   * Log browser capabilities
-   */
-  logBrowserCapabilities(): void {
-    if (typeof window === 'undefined') return;
-
-    const browserInfo = this.getBrowserInfo();
-    const capabilities = {
-      speechRecognition: this.isSpeechRecognitionSupported(),
-      mediaDevices: this.isMediaDevicesSupported(),
-      webAudio: this.isWebAudioSupported(),
-      https: window.location.protocol === 'https:',
-      localhost: window.location.hostname === 'localhost',
-    };
-
-    console.log('🔍 Browser Capabilities:', {
-      browser: `${browserInfo.name} ${browserInfo.version}`,
-      capabilities,
-      userAgent: browserInfo.userAgent,
+export const testNoiseCancellation = async (): Promise<boolean> => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        noiseSuppression: true,
+        echoCancellation: true,
+        autoGainControl: true
+      }
     });
+    
+    const track = stream.getAudioTracks()[0];
+    const settings = track.getSettings();
+    
+    console.log('🎤 Noise cancellation settings:', {
+      noiseSuppression: settings.noiseSuppression,
+      echoCancellation: settings.echoCancellation,
+      autoGainControl: settings.autoGainControl
+    });
+    
+    return settings.noiseSuppression === true;
+  } catch (error) {
+    console.error('🎤 Noise cancellation test failed:', error);
+    return false;
   }
+};
+
+export const isMobile = (): boolean => {
+  return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
+export const getMobileCapabilities = () => {
+  return {
+    isMobile: isMobile(),
+    hasSpeechRecognition: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+    hasMediaRecorder: !!window.MediaRecorder,
+    hasAudioContext: !!window.AudioContext
+  };
 };

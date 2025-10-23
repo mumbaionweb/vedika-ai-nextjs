@@ -14,6 +14,12 @@ export const config = {
   app: {
     environment: process.env.NEXT_PUBLIC_ENVIRONMENT || 'development',
   },
+  aws: {
+    region: 'ap-south-1',
+    accessKeyId: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY,
+    audioBucket: process.env.NEXT_PUBLIC_AUDIO_BUCKET || 'vedika-audio-temp',
+  },
 } as const;
 
 // Debug log
