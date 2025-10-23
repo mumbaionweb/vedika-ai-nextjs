@@ -6,9 +6,12 @@ export class MobileDictationService {
   private audioChunks: Blob[] = [];
   private isRecording = false;
   private deviceId: string;
+  private chunkInterval: NodeJS.Timeout | null = null;
+  private chunkDuration = 2000; // Process chunks every 2 seconds for more responsive transcription
 
   // Callbacks
   onFinalResult?: (text: string) => void;
+  onInterimResult?: (text: string) => void; // Add interim result callback
   onError?: (error: string) => void;
   onStart?: () => void;
   onEnd?: () => void;
@@ -43,8 +46,11 @@ export class MobileDictationService {
 
       this.mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-        await this.processAudioWithBackend(audioBlob);
+        await this.processAudioWithBackend(audioBlob, true); // Final result
       };
+
+      // Start chunked processing for real-time transcription
+      this.startChunkedProcessing();
 
       this.mediaRecorder.start();
       this.isRecording = true;
@@ -64,11 +70,33 @@ export class MobileDictationService {
     if (this.mediaRecorder && this.isRecording) {
       this.mediaRecorder.stop();
       this.isRecording = false;
+      
+      // Stop chunked processing
+      if (this.chunkInterval) {
+        clearInterval(this.chunkInterval);
+        this.chunkInterval = null;
+      }
+      
       if (this.onEnd) this.onEnd();
     }
   }
 
-  private async processAudioWithBackend(audioBlob: Blob): Promise<void> {
+  private startChunkedProcessing(): void {
+    // Process audio chunks every few seconds for real-time transcription
+    this.chunkInterval = setInterval(async () => {
+      if (this.isRecording && this.audioChunks.length > 0) {
+        const currentChunks = [...this.audioChunks];
+        this.audioChunks = []; // Clear chunks for next processing
+        
+        if (currentChunks.length > 0) {
+          const audioBlob = new Blob(currentChunks, { type: 'audio/wav' });
+          await this.processAudioWithBackend(audioBlob, false); // Interim result
+        }
+      }
+    }, this.chunkDuration);
+  }
+
+  private async processAudioWithBackend(audioBlob: Blob, isFinal: boolean = false): Promise<void> {
     try {
       const reader = new FileReader();
       reader.onload = async () => {
@@ -85,7 +113,8 @@ export class MobileDictationService {
             audio_format: 'wav',
             language_code: 'en-US',
             device_id: this.deviceId,
-            enable_noise_cancellation: true
+            enable_noise_cancellation: true,
+            is_final: isFinal
           })
         });
 
@@ -96,8 +125,16 @@ export class MobileDictationService {
         const result = await response.json();
         
         if (result.status === 'completed' && result.transcribed_text) {
-          if (this.onFinalResult) {
-            this.onFinalResult(result.transcribed_text);
+          if (isFinal) {
+            // Final result
+            if (this.onFinalResult) {
+              this.onFinalResult(result.transcribed_text);
+            }
+          } else {
+            // Interim result for real-time transcription
+            if (this.onInterimResult) {
+              this.onInterimResult(result.transcribed_text);
+            }
           }
         } else {
           console.error('🎤 Backend processing failed:', result);

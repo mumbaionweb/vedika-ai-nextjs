@@ -72,6 +72,7 @@ export class UnifiedDictationService {
     this.speechService.onEnd = callbacks.onEnd;
 
     this.mobileService.onFinalResult = callbacks.onFinalResult;
+    this.mobileService.onInterimResult = callbacks.onInterimResult;
     this.mobileService.onError = callbacks.onError;
     this.mobileService.onStart = callbacks.onStart;
     this.mobileService.onEnd = callbacks.onEnd;
