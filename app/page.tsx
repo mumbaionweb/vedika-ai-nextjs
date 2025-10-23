@@ -195,7 +195,7 @@ export default function Home() {
             {/* Bottom Bar with Agents and Interaction Modes/Submit */}
             <div className="flex items-center justify-between px-6 py-4 bg-stone-50 border-t border-primary-200">
               {/* Agent Selection */}
-              <div className="flex gap-2">
+              <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
                 {agents.map((agent) => {
                   const Icon = agent.icon;
                   const isSelected = selectedAgent === agent.id;
@@ -205,10 +205,10 @@ export default function Home() {
                       key={agent.id}
                       type="button"
                       onClick={() => setSelectedAgent(agent.id)}
-                      className={`p-1.5 rounded-lg transition-all ${
+                      className={`p-1.5 rounded-md transition-all ${
                         isSelected
-                          ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg'
-                          : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
+                          ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
+                          : 'bg-white text-secondary-600 hover:bg-secondary-100'
                       }`}
                       title={agent.label}
                       disabled={isLoading}
@@ -223,27 +223,29 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 {!isTyping ? (
                   /* Show Interaction Mode Buttons when not typing */
-                  interactionModes.map((mode) => {
-                    const Icon = mode.icon;
-                    const isSelected = interactionMode === mode.id;
-                    
-                    return (
-                      <button
-                        key={mode.id}
-                        type="button"
-                        onClick={() => setInteractionMode(mode.id as 'type' | 'dictation' | 'voice')}
-                        className={`p-1.5 rounded-lg transition-all ${
-                          isSelected
-                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg'
-                            : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
-                        }`}
-                        title={mode.description}
-                        disabled={isLoading}
-                      >
-                        <Icon className="w-2.5 h-2.5" />
-                      </button>
-                    );
-                  })
+                  <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
+                    {interactionModes.map((mode) => {
+                      const Icon = mode.icon;
+                      const isSelected = interactionMode === mode.id;
+                      
+                      return (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          onClick={() => setInteractionMode(mode.id as 'type' | 'dictation' | 'voice')}
+                          className={`p-1.5 rounded-md transition-all ${
+                            isSelected
+                              ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
+                              : 'bg-white text-secondary-600 hover:bg-secondary-100'
+                          }`}
+                          title={mode.description}
+                          disabled={isLoading}
+                        >
+                          <Icon className="w-2.5 h-2.5" />
+                        </button>
+                      );
+                    })}
+                  </div>
                 ) : (
                   /* Show Submit Button when typing */
                   <button
