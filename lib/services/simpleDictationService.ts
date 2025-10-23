@@ -18,7 +18,7 @@ export class SimpleDictationService {
     
     if (SpeechRecognition) {
       this.recognition = new SpeechRecognition();
-      this.recognition.continuous = true; // Keep listening until manually stopped
+      this.recognition.continuous = false; // Process speech and stop after each result
       this.recognition.interimResults = true;
       this.recognition.lang = 'en-US';
       this.recognition.maxAlternatives = 1;
@@ -97,16 +97,6 @@ export class SimpleDictationService {
         this.isListening = false;
         this.hasStartedListening = false;
         this.onEnd?.();
-        
-        // Restart recognition if it ended unexpectedly (for continuous mode)
-        if (this.recognition && !this.recognition.continuous) {
-          console.log('🔄 Restarting recognition...');
-          setTimeout(() => {
-            if (this.isListening) {
-              this.recognition.start();
-            }
-          }, 100);
-        }
       };
 
       // Add more event listeners for debugging
