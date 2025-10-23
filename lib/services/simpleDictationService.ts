@@ -32,8 +32,8 @@ export class SimpleDictationService {
     try {
       this.recognition = new SpeechRecognition();
       
-      // Settings
-      this.recognition.continuous = false;
+      // Settings - Try continuous = true to see if it helps
+      this.recognition.continuous = true;
       this.recognition.interimResults = true;
       this.recognition.lang = 'en-US';
       this.recognition.maxAlternatives = 1;
@@ -79,18 +79,34 @@ export class SimpleDictationService {
     this.recognition.onresult = (event: any) => {
       console.log('═══════════════════════════════════════');
       console.log('📝 [onresult] FIRED!!!');
+      console.log('📊 Event object:', event);
       console.log('📊 Results:', event.results);
+      console.log('📊 Results length:', event.results?.length);
+      console.log('📊 ResultIndex:', event.resultIndex);
       
       try {
         let finalTranscript = '';
         let interimTranscript = '';
         
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results || event.results.length === 0) {
+          console.warn('⚠️ No results in event');
+          return;
+        }
+        
+        for (let i = event.resultIndex || 0; i < event.results.length; i++) {
           const result = event.results[i];
+          console.log(`📊 Processing result[${i}]:`, result);
+          
+          if (!result || !result[0]) {
+            console.warn(`⚠️ Empty result at index ${i}`);
+            continue;
+          }
+          
           const transcript = result[0].transcript;
+          const confidence = result[0].confidence || 0;
           const isFinal = result.isFinal;
           
-          console.log(`Result[${i}]: "${transcript}" (final: ${isFinal})`);
+          console.log(`Result[${i}]: "${transcript}" (final: ${isFinal}, confidence: ${confidence})`);
           
           if (isFinal) {
             finalTranscript += transcript;
@@ -196,6 +212,18 @@ export class SimpleDictationService {
         console.log('✅ Recognition started');
         console.log('👂 Speak clearly: "Hello world"');
         console.log('═══════════════════════════════════════');
+        
+        // Manual test after 3 seconds to verify callback system
+        setTimeout(() => {
+          console.log('🧪 MANUAL TEST: Triggering result callback after 3 seconds...');
+          if (this.onFinalResult) {
+            this.onFinalResult('Manual test result: Hello world');
+            console.log('✅ Manual test callback triggered');
+          } else {
+            console.warn('⚠️ onFinalResult callback not set');
+          }
+        }, 3000);
+        
         return true;
       } catch (error: any) {
         if (error.message.includes('already started')) {
