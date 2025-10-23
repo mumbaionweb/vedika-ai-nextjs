@@ -36,6 +36,11 @@ export default function Home() {
     initializeSession();
   }, []);
 
+  // Debug state changes
+  useEffect(() => {
+    console.log('🔄 State changed - inputValue:', inputValue, 'dictationTranscript:', dictationTranscript);
+  }, [inputValue, dictationTranscript]);
+
   async function initializeSession() {
     try {
       console.log('🚀 Initializing vedika-ai session...');
@@ -96,11 +101,16 @@ export default function Home() {
 
     const success = dictationService.startListening({
       onResult: (result) => {
-        console.log('🎤 Dictation result:', result);
+        console.log('🎤 Dictation result received:', result);
+        console.log('🎤 Result transcript:', result.transcript);
+        console.log('🎤 Result isFinal:', result.isFinal);
+        
         if (result.isFinal) {
+          console.log('🎤 Setting final transcript to input:', result.transcript);
           setInputValue(result.transcript);
           setDictationTranscript('');
         } else {
+          console.log('🎤 Setting interim transcript:', result.transcript);
           setDictationTranscript(result.transcript);
         }
       },
@@ -160,9 +170,16 @@ export default function Home() {
 
   const handleVoiceModeToggleRecording = () => {
     console.log('🎙️ Toggling voice recording, current state:', isVoiceMode);
-    if (isVoiceMode) {
+    console.log('🎙️ Voice service recording state:', voiceService.getIsRecording());
+    
+    // Check if voice service is actually recording
+    const isCurrentlyRecording = voiceService.getIsRecording();
+    
+    if (isCurrentlyRecording) {
+      console.log('🎙️ Stopping voice recording');
       handleVoiceStop();
     } else {
+      console.log('🎙️ Starting voice recording');
       handleVoiceStart();
     }
   };
@@ -308,6 +325,9 @@ export default function Home() {
                 value={dictationTranscript || inputValue}
                 onChange={(e) => {
                   console.log('📝 Input changed:', e.target.value);
+                  console.log('📝 Current inputValue:', inputValue);
+                  console.log('📝 Current dictationTranscript:', dictationTranscript);
+                  console.log('📝 Current field value:', e.target.value);
                   setInputValue(e.target.value);
                   
                   // When user starts typing, switch to type mode and hide other modes
@@ -517,7 +537,7 @@ export default function Home() {
       <VoiceModePopup
         isOpen={isVoiceMode}
         onClose={handleVoiceModeClose}
-        isRecording={isVoiceMode}
+        isRecording={voiceService.getIsRecording()}
         onToggleRecording={handleVoiceModeToggleRecording}
         onSettings={handleVoiceModeSettings}
       />
