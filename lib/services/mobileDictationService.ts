@@ -39,8 +39,10 @@ export class MobileDictationService {
       this.audioChunks = [];
 
       this.mediaRecorder.ondataavailable = (event) => {
+        console.log('🎤 Audio data available:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
+          console.log('🎤 Audio chunks count:', this.audioChunks.length);
         }
       };
 
@@ -52,8 +54,10 @@ export class MobileDictationService {
       // Start chunked processing for real-time transcription
       this.startChunkedProcessing();
 
-      this.mediaRecorder.start();
+      this.mediaRecorder.start(1000); // Start with 1-second intervals
       this.isRecording = true;
+      
+      console.log('🎤 MediaRecorder started with 1-second intervals');
 
       if (this.onStart) this.onStart();
 
@@ -82,14 +86,17 @@ export class MobileDictationService {
   }
 
   private startChunkedProcessing(): void {
+    console.log('🎤 Starting chunked processing with interval:', this.chunkDuration, 'ms');
     // Process audio chunks every few seconds for real-time transcription
     this.chunkInterval = setInterval(async () => {
+      console.log('🎤 Chunk processing tick - isRecording:', this.isRecording, 'chunks:', this.audioChunks.length);
       if (this.isRecording && this.audioChunks.length > 0) {
         const currentChunks = [...this.audioChunks];
         this.audioChunks = []; // Clear chunks for next processing
         
         if (currentChunks.length > 0) {
           const audioBlob = new Blob(currentChunks, { type: 'audio/wav' });
+          console.log('🎤 Processing audio blob:', audioBlob.size, 'bytes');
           await this.processAudioWithBackend(audioBlob, false); // Interim result
         }
       }
@@ -98,12 +105,17 @@ export class MobileDictationService {
 
   private async processAudioWithBackend(audioBlob: Blob, isFinal: boolean = false): Promise<void> {
     try {
+      console.log('🎤 Processing audio with backend - isFinal:', isFinal, 'blob size:', audioBlob.size);
       const reader = new FileReader();
       reader.onload = async () => {
         const base64Audio = reader.result?.toString().split(',')[1];
         
-        if (!base64Audio) return;
+        if (!base64Audio) {
+          console.log('🎤 No base64 audio data');
+          return;
+        }
 
+        console.log('🎤 Sending audio to backend - base64 length:', base64Audio.length);
         // Send to backend for processing
         const response = await fetch('/api/dictation/transcribe', {
           method: 'POST',
@@ -123,8 +135,10 @@ export class MobileDictationService {
         }
 
         const result = await response.json();
+        console.log('🎤 Backend response:', result);
         
         if (result.status === 'completed' && result.transcribed_text) {
+          console.log('🎤 Transcription result:', result.transcribed_text);
           if (isFinal) {
             // Final result
             if (this.onFinalResult) {
