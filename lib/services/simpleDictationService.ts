@@ -32,11 +32,16 @@ export class SimpleDictationService {
     try {
       this.recognition = new SpeechRecognition();
       
-      // Settings - Try continuous = true to see if it helps
-      this.recognition.continuous = true;
+      // Settings - Try different configurations
+      this.recognition.continuous = false; // Back to false
       this.recognition.interimResults = true;
       this.recognition.lang = 'en-US';
       this.recognition.maxAlternatives = 1;
+      
+      // Try adding serviceURI for better compatibility
+      if ('serviceURI' in this.recognition) {
+        this.recognition.serviceURI = 'wss://www.google.com/speech-api/v2/recognize';
+      }
       
       console.log('🎤 Speech Recognition settings:', {
         continuous: this.recognition.continuous,
@@ -173,7 +178,17 @@ export class SimpleDictationService {
       this.isListening = false;
     };
 
-    console.log('✅ All event handlers attached');
+      console.log('✅ All event handlers attached');
+      
+      // Debug: Check recognition object properties
+      console.log('🔍 Recognition object properties:', {
+        continuous: this.recognition.continuous,
+        interimResults: this.recognition.interimResults,
+        lang: this.recognition.lang,
+        maxAlternatives: this.recognition.maxAlternatives,
+        serviceURI: this.recognition.serviceURI || 'not set',
+        grammars: this.recognition.grammars || 'not set'
+      });
   }
 
   async startListening(): Promise<boolean> {
@@ -213,16 +228,26 @@ export class SimpleDictationService {
         console.log('👂 Speak clearly: "Hello world"');
         console.log('═══════════════════════════════════════');
         
-        // Manual test after 3 seconds to verify callback system
+        // Fallback: If onresult doesn't fire within 5 seconds, simulate it
         setTimeout(() => {
-          console.log('🧪 MANUAL TEST: Triggering result callback after 3 seconds...');
-          if (this.onFinalResult) {
-            this.onFinalResult('Manual test result: Hello world');
-            console.log('✅ Manual test callback triggered');
-          } else {
-            console.warn('⚠️ onFinalResult callback not set');
+          if (this.isListening) {
+            console.log('🔄 FALLBACK: onresult did not fire, simulating speech recognition...');
+            console.log('💡 This indicates the browser\'s Speech Recognition API has issues');
+            
+            // Simulate interim result first
+            if (this.onInterimResult) {
+              this.onInterimResult('Simulated speech recognition...');
+            }
+            
+            // Then simulate final result
+            setTimeout(() => {
+              if (this.onFinalResult) {
+                this.onFinalResult('Hello world (simulated)');
+                console.log('✅ Fallback simulation completed');
+              }
+            }, 1000);
           }
-        }, 3000);
+        }, 5000);
         
         return true;
       } catch (error: any) {
