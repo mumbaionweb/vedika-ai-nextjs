@@ -11,7 +11,7 @@ import { unifiedDictationService } from '@/lib/services/unifiedDictationService'
 import { InteractionService } from '@/lib/services/interactionService';
 import { checkBrowserSupport } from '@/lib/utils/browserSupport';
 import { VoiceService } from '@/lib/services/voiceService';
-import { SimpleDictationService } from '@/lib/services/simpleDictationService';
+import { AWSTranscribeService } from '@/lib/services/awsTranscribeService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
 
@@ -33,8 +33,8 @@ export default function Home() {
   const [interactionService] = useState(() => new InteractionService());
   const [voiceService] = useState(() => new VoiceService());
   
-  // ✅ Use useRef to create service only once
-  const dictationServiceRef = useRef<SimpleDictationService | null>(null);
+  // ✅ Use useRef to create AWS Transcribe service only once
+  const awsTranscribeServiceRef = useRef<AWSTranscribeService | null>(null);
 
   // Remove useChat hook since we're not using it anymore
 
@@ -49,55 +49,39 @@ export default function Home() {
     console.log('🔄 State changed - inputValue:', inputValue, 'dictationTranscript:', dictationTranscript);
   }, [inputValue, dictationTranscript]);
 
-  // Initialize dictation service once
+  // Initialize AWS Transcribe service once
   useEffect(() => {
-    if (!dictationServiceRef.current) {
-      dictationServiceRef.current = new SimpleDictationService();
+    if (!awsTranscribeServiceRef.current) {
+      awsTranscribeServiceRef.current = new AWSTranscribeService();
       
       // Set callbacks
-      dictationServiceRef.current.onInterimResult = (text: string) => {
-        console.log('📝 Interim result:', text);
-        if (text && text.trim()) {
+      awsTranscribeServiceRef.current.onTranscript = (text: string, isPartial: boolean) => {
+        console.log(isPartial ? '📝 Interim result:' : '✅ Final result:', text);
+        if (isPartial) {
           setDictationTranscript(text);
         } else {
-          setDictationTranscript('Processing...');
+          setInputValue(text);
+          setDictationTranscript('');
+          setIsDictating(false);
+          console.log('✅ AWS Transcribe completed. User can now submit the message.');
         }
       };
       
-      dictationServiceRef.current.onFinalResult = (text: string) => {
-        console.log('✅ Final result:', text);
-        setInputValue(text);
-        setDictationTranscript('');
-        setIsDictating(false);
-        
-        // The user can manually submit the message or it will be submitted automatically
-        console.log('✅ Dictation completed. User can now submit the message.');
-      };
-      
-      dictationServiceRef.current.onError = (error: string) => {
-        console.error('❌ Dictation error:', error);
+      awsTranscribeServiceRef.current.onError = (error: string) => {
+        console.error('❌ AWS Transcribe error:', error);
         setIsDictating(false);
         setDictationTranscript('');
       };
       
-      dictationServiceRef.current.onStart = () => {
-        console.log('🎤 Dictation service started');
-        setDictationTranscript('Waiting for you to speak...');
-      };
-      
-      dictationServiceRef.current.onSpeechStart = () => {
-        console.log('🎤 Speech recognition actually started');
+      awsTranscribeServiceRef.current.onStart = () => {
+        console.log('🎤 AWS Transcribe service started');
         setDictationTranscript('Listening...');
       };
       
-      dictationServiceRef.current.onEnd = () => {
-        console.log('🎤 Dictation service ended');
-        if (!dictationTranscript || 
-            dictationTranscript === 'Listening...' || 
-            dictationTranscript === 'Processing...' ||
-            dictationTranscript === 'Waiting for you to speak...') {
-          setDictationTranscript('');
-        }
+      awsTranscribeServiceRef.current.onEnd = () => {
+        console.log('🎤 AWS Transcribe service ended');
+        setIsDictating(false);
+        setDictationTranscript('');
       };
     }
   }, []); // Empty dependency array - run only once
@@ -156,27 +140,28 @@ export default function Home() {
     setDictationTranscript('');
     setInputValue('');
     
-    console.log('Starting dictation...');
-    if (dictationServiceRef.current) {
-      const success = await dictationServiceRef.current.startListening();
-      console.log('Dictation start result:', success);
+    console.log('Starting AWS Transcribe...');
+    if (awsTranscribeServiceRef.current) {
+      const success = await awsTranscribeServiceRef.current.startRealTimeTranscription();
+      console.log('AWS Transcribe start result:', success);
       
       if (success) {
-        console.log('🎤 Dictation started');
+        console.log('🎤 AWS Transcribe started');
+        setIsDictating(true);
       } else {
-        console.error('🎤 Failed to start dictation');
+        console.error('🎤 Failed to start AWS Transcribe');
         setIsDictating(false);
       }
     } else {
-      console.error('❌ Dictation service not initialized');
+      console.error('❌ AWS Transcribe service not initialized');
       setIsDictating(false);
     }
   };
 
   const handleDictationStop = () => {
-    console.log('🛑 Stopping dictation...');
-    if (dictationServiceRef.current) {
-      dictationServiceRef.current.stopListening();
+    console.log('🛑 Stopping AWS Transcribe...');
+    if (awsTranscribeServiceRef.current) {
+      awsTranscribeServiceRef.current.stopTranscription();
     }
     setIsDictating(false);
     setDictationTranscript('');
