@@ -42,25 +42,54 @@ export const useSpeechRecognition = (): UseSpeechRecognitionHook => {
     recognition.lang = "en-US"; // Set desired language
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      console.log('🎤 Speech recognition result received:', event.results.length, 'results');
       let finalTranscript = "";
       let interimTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
+        const result = event.results[i];
+        const transcript = result[0].transcript;
+        const confidence = result[0].confidence || 0;
+        
+        console.log(`Result ${i}: "${transcript}" (final: ${result.isFinal}, confidence: ${confidence})`);
+        
+        if (result.isFinal) {
+          finalTranscript += transcript;
         } else {
-          interimTranscript += event.results[i][0].transcript;
+          interimTranscript += transcript;
         }
       }
-      setTranscript(finalTranscript + interimTranscript);
+      
+      const combinedTranscript = finalTranscript + interimTranscript;
+      console.log('📝 Setting transcript:', combinedTranscript);
+      setTranscript(combinedTranscript);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error("Speech recognition error:", event.error);
-      if (recognitionRef.current && isListening) { // Ensure stop is called only if it was listening
-           recognitionRef.current.stop();
+      
+      // Handle different error types
+      switch (event.error) {
+        case 'no-speech':
+          console.log('🔇 No speech detected, continuing to listen...');
+          // Don't stop for no-speech errors, just continue listening
+          break;
+        case 'audio-capture':
+          console.error('🎤 Audio capture error - microphone may be busy or not available');
+          setIsListening(false);
+          break;
+        case 'not-allowed':
+          console.error('🚫 Microphone permission denied');
+          setIsListening(false);
+          break;
+        case 'network':
+          console.error('🌐 Network error');
+          setIsListening(false);
+          break;
+        default:
+          console.error('❌ Unknown error:', event.error);
+          setIsListening(false);
       }
-      setIsListening(false);
     };
     
     recognition.onend = () => {
@@ -84,15 +113,21 @@ export const useSpeechRecognition = (): UseSpeechRecognitionHook => {
     };
   }, [isListening]); // Re-run effect dependencies carefully. Added isListening to manage restart logic.
 
-  const startListening = () => {
+  const startListening = async () => {
     if (recognitionRef.current && !isListening) {
       setTranscript(""); // Clear previous transcript
+      
       try {
-           recognitionRef.current.start();
-           setIsListening(true);
+        // Request microphone permission first
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('🎤 Microphone permission granted');
+        
+        recognitionRef.current.start();
+        setIsListening(true);
+        console.log('🎤 Speech recognition started');
       } catch (error) {
-           console.error("Error starting recognition:", error);
-           setIsListening(false); // Ensure state is correct if start fails
+        console.error("Error starting recognition:", error);
+        setIsListening(false); // Ensure state is correct if start fails
       }
     }
   };
