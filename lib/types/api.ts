@@ -126,9 +126,10 @@ export interface CoinsBalance {
   plan: string;
   daily_vedika_coins: number;
   vedika_coins_used: number;
-  vedika_coins: {
+  vedika_coins?: {
     remaining: number;
   };
+  vedika_coins_remaining?: number; // Fallback for old API structure
   expires_at?: string;
 }
 

@@ -31,16 +31,18 @@ export function useCoins(): UseCoinsReturn {
       const session = await DeviceSessionApi.validateSession();
       
       if (session) {
+        const remainingCoins = session.vedika_coins?.remaining || session.vedika_coins_remaining || 0;
         console.log('🪙 [useCoins] Session data:', {
-          vedikaCoinsRemaining: session.vedika_coins.remaining,
+          vedikaCoinsRemaining: remainingCoins,
           dailyVedikaCoins: session.daily_vedika_coins
         });
-        setVedikaCoinsRemaining(session.vedika_coins.remaining);
+        setVedikaCoinsRemaining(remainingCoins);
         setDailyVedikaCoins(session.daily_vedika_coins);
       } else {
         console.warn('⚠️ [useCoins] No valid session, creating new one...');
         const newSession = await DeviceSessionApi.createSession();
-        setVedikaCoinsRemaining(newSession.vedika_coins.remaining);
+        const newRemainingCoins = newSession.vedika_coins?.remaining || newSession.vedika_coins_remaining || 0;
+        setVedikaCoinsRemaining(newRemainingCoins);
         setDailyVedikaCoins(newSession.daily_vedika_coins);
       }
     } catch (err) {

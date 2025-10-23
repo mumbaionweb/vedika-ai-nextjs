@@ -13,9 +13,10 @@ interface DeviceSessionResponse {
   max_conversations: number;
   plan: string;
   daily_vedika_coins: number;
-  vedika_coins: {
+  vedika_coins?: {
     remaining: number;
   };
+  vedika_coins_remaining?: number; // Fallback for old API structure
   message: string;
 }
 
@@ -59,7 +60,7 @@ export class DeviceSessionApi {
     
     console.log('✅ Device session created:', {
       sessionId: data.session_id,
-      credits: data.vedika_coins.remaining,
+      credits: data.vedika_coins?.remaining || data.vedika_coins_remaining,
       expiresAt: data.expires_at
     });
     
@@ -106,7 +107,7 @@ export class DeviceSessionApi {
       
       const data: DeviceSessionResponse = await response.json();
       console.log('✅ Session valid:', {
-        credits: data.vedika_coins.remaining,
+        credits: data.vedika_coins?.remaining || data.vedika_coins_remaining,
         expiresAt: data.expires_at
       });
       

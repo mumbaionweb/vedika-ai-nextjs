@@ -54,7 +54,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         const session = await DeviceSessionApi.ensureSession();
         console.log('✅ [CHAT PAGE] Session ready:', {
           sessionId: session.session_id,
-          credits: session.vedika_coins.remaining
+          credits: session.vedika_coins?.remaining || session.vedika_coins_remaining || 0
         });
         setSessionReady(true);
       } catch (error) {
