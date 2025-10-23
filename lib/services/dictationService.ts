@@ -120,6 +120,8 @@ export class DictationService {
       
       // Handle recognition end
       this.recognition.onend = () => {
+        console.log('🎤 Speech recognition ended');
+        console.log('🎤 Recognition state after end:', this.recognition.state);
         this.isListening = false;
         if (this.callbacks.onEnd) {
           this.callbacks.onEnd();
@@ -129,6 +131,7 @@ export class DictationService {
       // Handle recognition start
       this.recognition.onstart = () => {
         console.log('🎤 Speech recognition started');
+        console.log('🎤 Recognition state after start:', this.recognition.state);
         this.isListening = true;
         if (this.callbacks.onStart) {
           this.callbacks.onStart();
@@ -167,6 +170,30 @@ export class DictationService {
 
     try {
       console.log('🎤 Starting speech recognition...');
+      console.log('🎤 Checking microphone permissions...');
+      
+      // Check microphone permissions
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: 'microphone' as PermissionName }).then((result) => {
+          console.log('🎤 Microphone permission:', result.state);
+        }).catch((err) => {
+          console.log('🎤 Could not check microphone permissions:', err);
+        });
+      }
+      
+      // Test microphone access
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        console.log('🎤 Testing microphone access...');
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then((stream) => {
+            console.log('🎤 Microphone access granted, stream:', stream);
+            // Stop the stream immediately as we just wanted to test access
+            stream.getTracks().forEach(track => track.stop());
+          })
+          .catch((error) => {
+            console.error('🎤 Microphone access denied:', error);
+          });
+      }
       
       // Stop any existing recognition first
       if (this.recognition && this.recognition.state === 'listening') {
@@ -177,8 +204,28 @@ export class DictationService {
       // Small delay to ensure previous recognition is stopped
       setTimeout(() => {
         try {
+          console.log('🎤 Attempting to start recognition...');
           this.recognition.start();
           console.log('🎤 Speech recognition started successfully');
+          
+          // Add timeout to detect if recognition is hanging
+          setTimeout(() => {
+            if (this.isListening && this.recognition.state === 'listening') {
+              console.log('🎤 Recognition still listening after 10 seconds');
+              console.log('🎤 Recognition state:', this.recognition.state);
+              console.log('🎤 Is listening flag:', this.isListening);
+            }
+          }, 10000);
+          
+          // Add periodic state checking
+          const stateCheckInterval = setInterval(() => {
+            if (this.isListening) {
+              console.log('🎤 Recognition state check:', this.recognition.state);
+            } else {
+              clearInterval(stateCheckInterval);
+            }
+          }, 2000);
+          
         } catch (startError) {
           console.error('🎤 Failed to start speech recognition after delay:', startError);
           if (this.callbacks.onError) {
