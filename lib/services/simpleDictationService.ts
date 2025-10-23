@@ -92,6 +92,8 @@ export class SimpleDictationService {
       
       this.recognition.onend = () => {
         console.log('🛑 Speech recognition ended');
+        console.log('🛑 End reason - continuous mode:', this.recognition.continuous);
+        console.log('🛑 End reason - was listening:', this.isListening);
         this.isListening = false;
         this.hasStartedListening = false;
         this.onEnd?.();
@@ -135,6 +137,23 @@ export class SimpleDictationService {
       this.recognition.onnomatch = () => {
         console.log('❓ No speech match found');
       };
+      
+      // Add timeout debugging
+      setTimeout(() => {
+        console.log('⏰ 5 seconds elapsed - checking recognition state:', {
+          isListening: this.isListening,
+          hasStartedListening: this.hasStartedListening,
+          recognition: this.recognition ? 'exists' : 'null'
+        });
+      }, 5000);
+      
+      setTimeout(() => {
+        console.log('⏰ 10 seconds elapsed - checking recognition state:', {
+          isListening: this.isListening,
+          hasStartedListening: this.hasStartedListening,
+          recognition: this.recognition ? 'exists' : 'null'
+        });
+      }, 10000);
     } else {
       console.error('❌ Speech Recognition not supported');
     }
@@ -177,10 +196,29 @@ export class SimpleDictationService {
       console.log('🎤 Audio settings:', settings);
       
       // Start recognition
+      console.log('🎤 About to start recognition...');
       this.recognition.start();
       this.isListening = true;
       
       console.log('✅ Speech recognition started successfully');
+      
+      // Add debugging to check if recognition is actually running
+      setTimeout(() => {
+        console.log('🔍 Recognition check after 1 second:', {
+          isListening: this.isListening,
+          hasStartedListening: this.hasStartedListening,
+          recognitionState: this.recognition ? 'exists' : 'null'
+        });
+      }, 1000);
+      
+      // Add a test to see if the callback system is working
+      setTimeout(() => {
+        console.log('🧪 TEST: Checking if callback system works...');
+        if (this.onInterimResult) {
+          console.log('🧪 TEST: Calling onInterimResult with test text...');
+          this.onInterimResult('Test interim result');
+        }
+      }, 3000);
       
       return true;
       
