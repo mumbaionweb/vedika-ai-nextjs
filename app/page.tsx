@@ -382,16 +382,6 @@ export default function Home() {
                 {!isTyping ? (
                   /* Show Interaction Mode Buttons when not typing */
                   <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
-                    {/* Test button to verify clicks work */}
-                    <button
-                      type="button"
-                      onClick={() => console.log('🧪 TEST BUTTON CLICKED - CLICKS ARE WORKING!')}
-                      className="p-1.5 rounded-md bg-red-500 text-white text-xs mr-2"
-                      title="Test button - check console"
-                    >
-                      TEST
-                    </button>
-                    
                     {interactionModes.map((mode) => {
                       const Icon = mode.icon;
                       const isSelected = interactionMode === mode.id;
