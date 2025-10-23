@@ -304,6 +304,43 @@ export class DictationService {
               // Check if there are any issues with the recognition
               console.log('🎤 Recognition object keys:', Object.keys(this.recognition));
               console.log('🎤 Recognition object:', this.recognition);
+              
+              // Try to access recognition properties directly
+              console.log('🎤 Direct property access:', {
+                continuous: this.recognition.continuous,
+                interimResults: this.recognition.interimResults,
+                lang: this.recognition.lang,
+                maxAlternatives: this.recognition.maxAlternatives,
+                grammars: this.recognition.grammars,
+                serviceURI: (this.recognition as any).serviceURI
+              });
+              
+              // Check if recognition has any methods
+              console.log('🎤 Recognition methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this.recognition)));
+              
+              // Try to check if recognition is actually detecting audio
+              console.log('🎤 Recognition status check:', {
+                isListening: this.isListening,
+                recognitionExists: !!this.recognition,
+                hasOnResult: !!this.recognition.onresult,
+                hasOnStart: !!this.recognition.onstart,
+                hasOnEnd: !!this.recognition.onend,
+                hasOnError: !!this.recognition.onerror
+              });
+              
+              // Test if we can manually trigger speech detection
+              console.log('🎤 Testing manual speech detection...');
+              try {
+                // Try to restart recognition to see if it helps
+                console.log('🎤 Attempting to restart recognition...');
+                this.recognition.stop();
+                setTimeout(() => {
+                  this.recognition.start();
+                  console.log('🎤 Recognition restarted for testing');
+                }, 100);
+              } catch (restartError) {
+                console.error('🎤 Failed to restart recognition:', restartError);
+              }
             }
           }, 5000);
           
