@@ -32,13 +32,28 @@ export class DictationService {
     // Check if Speech Recognition is supported
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      console.log('🎤 SpeechRecognition constructor:', SpeechRecognition);
+      console.log('🎤 Available on window:', {
+        SpeechRecognition: !!window.SpeechRecognition,
+        webkitSpeechRecognition: !!window.webkitSpeechRecognition
+      });
+      
       this.recognition = new SpeechRecognition();
+      console.log('🎤 Recognition instance created:', this.recognition);
+      console.log('🎤 Recognition properties:', {
+        continuous: this.recognition.continuous,
+        interimResults: this.recognition.interimResults,
+        lang: this.recognition.lang,
+        maxAlternatives: this.recognition.maxAlternatives
+      });
       
       // Configure recognition settings
       this.recognition.continuous = false;
       this.recognition.interimResults = true;
       this.recognition.lang = 'en-US';
       this.recognition.maxAlternatives = 1;
+      
+      console.log('🎤 Recognition configured with settings');
       
       // Handle recognition results
       this.recognition.onresult = (event: any) => {
@@ -205,8 +220,19 @@ export class DictationService {
       setTimeout(() => {
         try {
           console.log('🎤 Attempting to start recognition...');
+          console.log('🎤 Recognition before start:', {
+            state: this.recognition.state,
+            readyState: (this.recognition as any).readyState,
+            continuous: this.recognition.continuous,
+            interimResults: this.recognition.interimResults
+          });
+          
           this.recognition.start();
           console.log('🎤 Speech recognition started successfully');
+          console.log('🎤 Recognition after start:', {
+            state: this.recognition.state,
+            readyState: (this.recognition as any).readyState
+          });
           
           // Add timeout to detect if recognition is hanging
           setTimeout(() => {
@@ -221,10 +247,34 @@ export class DictationService {
           const stateCheckInterval = setInterval(() => {
             if (this.isListening) {
               console.log('🎤 Recognition state check:', this.recognition.state);
+              console.log('🎤 Recognition properties check:', {
+                state: this.recognition.state,
+                readyState: (this.recognition as any).readyState,
+                isListening: this.isListening
+              });
             } else {
               clearInterval(stateCheckInterval);
             }
           }, 2000);
+          
+          // Add a test to see if recognition is working
+          setTimeout(() => {
+            if (this.isListening) {
+              console.log('🎤 Testing recognition after 3 seconds...');
+              console.log('🎤 Recognition still active:', this.recognition);
+              console.log('🎤 Recognition state:', this.recognition.state);
+              
+              // Try to manually trigger a test
+              if (this.callbacks.onResult) {
+                console.log('🎤 Testing callback manually...');
+                this.callbacks.onResult({
+                  transcript: 'TEST - Recognition is working',
+                  isFinal: true,
+                  confidence: 0.9
+                });
+              }
+            }
+          }, 3000);
           
         } catch (startError) {
           console.error('🎤 Failed to start speech recognition after delay:', startError);
@@ -285,7 +335,20 @@ export class DictationService {
    */
   public getRecognitionState(): string {
     if (!this.recognition) return 'not-initialized';
-    return this.recognition.state || 'unknown';
+    
+    // Try different ways to get the state
+    const state = this.recognition.state || 
+                  (this.recognition as any).readyState || 
+                  (this.isListening ? 'listening' : 'not-listening');
+    
+    console.log('🎤 Getting recognition state:', {
+      state: this.recognition.state,
+      readyState: (this.recognition as any).readyState,
+      isListening: this.isListening,
+      finalState: state
+    });
+    
+    return state;
   }
 
   /**
