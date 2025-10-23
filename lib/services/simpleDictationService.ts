@@ -1,278 +1,73 @@
 /**
- * Simple Dictation Service
- * Uses browser's built-in Speech Recognition API for immediate, free transcription
+ * Simple Dictation Service - Minimal Working Version
+ * Last attempt before switching to AWS SDK
  */
 
 export class SimpleDictationService {
   private recognition: any = null;
   private isListening = false;
-  private isInitialized = false;
 
   constructor() {
-    if (this.isInitialized) {
-      console.warn('⚠️ Service already initialized, skipping...');
-      return;
-    }
-
-    console.log('🔧 Constructing SimpleDictationService...');
-    
-    // Only initialize on client side
-    if (typeof window === 'undefined') {
-      console.log('🔧 Server-side rendering, skipping initialization');
-      return;
-    }
+    if (typeof window === 'undefined') return;
     
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      console.error('❌ Speech Recognition not supported');
-      return;
-    }
+    if (!SpeechRecognition) return;
 
-    try {
-      this.recognition = new SpeechRecognition();
-      
-      // Settings - Try different configurations
-      this.recognition.continuous = false; // Back to false
-      this.recognition.interimResults = true;
-      this.recognition.lang = 'en-US';
-      this.recognition.maxAlternatives = 1;
-      
-      // Try adding serviceURI for better compatibility
-      if ('serviceURI' in this.recognition) {
-        this.recognition.serviceURI = 'wss://www.google.com/speech-api/v2/recognize';
-      }
-      
-      console.log('🎤 Speech Recognition settings:', {
-        continuous: this.recognition.continuous,
-        interimResults: this.recognition.interimResults,
-        lang: this.recognition.lang
-      });
-      
-      this.attachEventHandlers();
-      this.isInitialized = true;
-      
-      console.log('✅ Speech Recognition initialized');
-    } catch (error) {
-      console.error('❌ Error initializing:', error);
-    }
-  }
+    this.recognition = new SpeechRecognition();
+    this.recognition.continuous = false;
+    this.recognition.interimResults = true;
+    this.recognition.lang = 'en-US';
 
-  private attachEventHandlers() {
-    if (!this.recognition) return;
-
-    console.log('🔧 Attaching event handlers...');
-
+    // Simple event handlers
     this.recognition.onstart = () => {
-      console.log('🎤 [onstart] Recognition started');
+      console.log('🎤 Recognition started');
       this.isListening = true;
     };
 
-    this.recognition.onaudiostart = () => {
-      console.log('🎵 [onaudiostart] Audio input started');
-    };
-
-    this.recognition.onsoundstart = () => {
-      console.log('🔊 [onsoundstart] Sound detected');
-    };
-
-    this.recognition.onspeechstart = () => {
-      console.log('🗣️ [onspeechstart] Speech detected');
-    };
-
-    // ✅ CRITICAL: onresult handler
     this.recognition.onresult = (event: any) => {
-      console.log('═══════════════════════════════════════');
-      console.log('📝 [onresult] FIRED!!!');
-      console.log('📊 Event object:', event);
-      console.log('📊 Results:', event.results);
-      console.log('📊 Results length:', event.results?.length);
-      console.log('📊 ResultIndex:', event.resultIndex);
+      console.log('📝 Result received:', event.results);
+      let finalTranscript = '';
       
-      try {
-        let finalTranscript = '';
-        let interimTranscript = '';
-        
-        if (!event.results || event.results.length === 0) {
-          console.warn('⚠️ No results in event');
-          return;
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        } else {
+          this.onInterimResult?.(result[0].transcript);
         }
-        
-        for (let i = event.resultIndex || 0; i < event.results.length; i++) {
-          const result = event.results[i];
-          console.log(`📊 Processing result[${i}]:`, result);
-          
-          if (!result || !result[0]) {
-            console.warn(`⚠️ Empty result at index ${i}`);
-            continue;
-          }
-          
-          const transcript = result[0].transcript;
-          const confidence = result[0].confidence || 0;
-          const isFinal = result.isFinal;
-          
-          console.log(`Result[${i}]: "${transcript}" (final: ${isFinal}, confidence: ${confidence})`);
-          
-          if (isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        if (interimTranscript) {
-          console.log('⏳ INTERIM:', interimTranscript);
-          this.onInterimResult?.(interimTranscript);
-        }
-        
-        if (finalTranscript) {
-          console.log('✅ FINAL:', finalTranscript);
-          this.onFinalResult?.(finalTranscript);
-        }
-        
-        console.log('═══════════════════════════════════════');
-      } catch (error) {
-        console.error('❌ Error processing result:', error);
       }
-    };
-
-    this.recognition.onspeechend = () => {
-      console.log('🗣️ [onspeechend] Speech ended, waiting for results...');
-    };
-
-    this.recognition.onsoundend = () => {
-      console.log('🔊 [onsoundend] Sound ended');
-    };
-
-    this.recognition.onaudioend = () => {
-      console.log('🎵 [onaudioend] Audio ended, results should fire now...');
-    };
-
-    this.recognition.onnomatch = (event: any) => {
-      console.warn('═══════════════════════════════════════');
-      console.warn('⚠️ [onnomatch] NO MATCH - Speech not recognized!');
-      console.warn('💡 Try:');
-      console.warn('   - Speaking louder');
-      console.warn('   - Speaking more clearly');
-      console.warn('   - Using common phrases like "Hello world"');
-      console.warn('═══════════════════════════════════════');
+      
+      if (finalTranscript) {
+        this.onFinalResult?.(finalTranscript);
+      }
     };
 
     this.recognition.onerror = (event: any) => {
-      console.error('═══════════════════════════════════════');
-      console.error('❌ [onerror] Error:', event.error);
-      
-      // Handle "already started" error gracefully
-      if (event.error === 'aborted' || event.error.includes('already started')) {
-        console.log('💡 Recognition aborted or already running - this is normal');
-      }
-      
-      console.error('═══════════════════════════════════════');
+      console.error('❌ Recognition error:', event.error);
       this.onError?.(event.error);
     };
 
     this.recognition.onend = () => {
-      console.log('═══════════════════════════════════════');
-      console.log('🛑 [onend] Recognition ended');
-      console.log('═══════════════════════════════════════');
+      console.log('🛑 Recognition ended');
       this.isListening = false;
     };
-
-      console.log('✅ All event handlers attached');
-      
-      // Debug: Check recognition object properties
-      console.log('🔍 Recognition object properties:', {
-        continuous: this.recognition.continuous,
-        interimResults: this.recognition.interimResults,
-        lang: this.recognition.lang,
-        maxAlternatives: this.recognition.maxAlternatives,
-        serviceURI: this.recognition.serviceURI || 'not set',
-        grammars: this.recognition.grammars || 'not set'
-      });
   }
 
   async startListening(): Promise<boolean> {
-    if (!this.recognition) {
-      console.error('❌ No recognition object');
-      return false;
-    }
-    
-    // ✅ CRITICAL: Check if already listening
-    if (this.isListening) {
-      console.warn('⚠️ Already listening, stopping first...');
-      this.recognition.abort(); // Use abort instead of stop
-      await new Promise(resolve => setTimeout(resolve, 100)); // Wait for abort
-      this.isListening = false;
-    }
+    if (!this.recognition) return false;
     
     try {
-      console.log('═══════════════════════════════════════');
-      console.log('🎤 STARTING DICTATION');
-      console.log('═══════════════════════════════════════');
-      
-      // Request microphone
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          noiseSuppression: true,
-          echoCancellation: true,
-          autoGainControl: true
-        }
-      });
-      
-      console.log('✅ Microphone granted');
-      
-      // Start recognition with try-catch
-      try {
-        this.recognition.start();
-        console.log('✅ Recognition started');
-        console.log('👂 Speak clearly: "Hello world"');
-        console.log('═══════════════════════════════════════');
-        
-        // Fallback: If onresult doesn't fire within 5 seconds, simulate it
-        setTimeout(() => {
-          if (this.isListening) {
-            console.log('🔄 FALLBACK: onresult did not fire, simulating speech recognition...');
-            console.log('💡 This indicates the browser\'s Speech Recognition API has issues');
-            
-            // Simulate interim result first
-            if (this.onInterimResult) {
-              this.onInterimResult('Simulated speech recognition...');
-            }
-            
-            // Then simulate final result
-            setTimeout(() => {
-              if (this.onFinalResult) {
-                this.onFinalResult('Hello world (simulated)');
-                console.log('✅ Fallback simulation completed');
-              }
-            }, 1000);
-          }
-        }, 5000);
-        
-        return true;
-      } catch (error: any) {
-        if (error.message.includes('already started')) {
-          console.log('🔄 Recognition already active, aborting and restarting...');
-          this.recognition.abort();
-          await new Promise(resolve => setTimeout(resolve, 200));
-          this.recognition.start();
-          console.log('✅ Recognition restarted');
-          return true;
-        }
-        throw error;
-      }
-      
+      this.recognition.start();
+      return true;
     } catch (error) {
       console.error('❌ Failed to start:', error);
-      this.onError?.(error instanceof Error ? error.message : 'Failed');
       return false;
     }
   }
 
   stopListening(): void {
     if (this.recognition && this.isListening) {
-      console.log('🛑 Stopping recognition...');
-      this.recognition.abort(); // Use abort for immediate stop
+      this.recognition.stop();
       this.isListening = false;
     }
   }
@@ -282,9 +77,7 @@ export class SimpleDictationService {
   }
 
   isSupported(): boolean {
-    if (typeof window === 'undefined') {
-      return false;
-    }
+    if (typeof window === 'undefined') return false;
     return !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition;
   }
 
