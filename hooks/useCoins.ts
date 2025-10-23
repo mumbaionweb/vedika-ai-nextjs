@@ -32,15 +32,15 @@ export function useCoins(): UseCoinsReturn {
       
       if (session) {
         console.log('🪙 [useCoins] Session data:', {
-          vedikaCoinsRemaining: session.vedika_coins_remaining,
+          vedikaCoinsRemaining: session.vedika_coins.remaining,
           dailyVedikaCoins: session.daily_vedika_coins
         });
-        setVedikaCoinsRemaining(session.vedika_coins_remaining);
+        setVedikaCoinsRemaining(session.vedika_coins.remaining);
         setDailyVedikaCoins(session.daily_vedika_coins);
       } else {
         console.warn('⚠️ [useCoins] No valid session, creating new one...');
         const newSession = await DeviceSessionApi.createSession();
-        setVedikaCoinsRemaining(newSession.vedika_coins_remaining);
+        setVedikaCoinsRemaining(newSession.vedika_coins.remaining);
         setDailyVedikaCoins(newSession.daily_vedika_coins);
       }
     } catch (err) {

@@ -34,7 +34,7 @@ export default function Home() {
       
       console.log('✅ Session ready:', {
         sessionId: sessionResult.session_id,
-        credits: sessionResult.vedika_coins_remaining,
+        credits: sessionResult.vedika_coins.remaining,
       });
       setSessionReady(true);
     } catch (error) {

@@ -24,7 +24,7 @@
 - React hook for managing credits state
 - Fetches data via session validation endpoint
 - Auto-refreshes on component mount
-- Computes used vedika coins: `daily_vedika_coins - vedika_coins_remaining`
+- Computes used vedika coins: `daily_vedika_coins - vedika_coins.remaining`
 - Console logging for debugging
 
 #### 3. **API Integration Updates**
