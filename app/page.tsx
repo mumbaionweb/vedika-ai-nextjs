@@ -7,6 +7,9 @@ import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
+import { dictationService } from '@/lib/services/dictationService';
+import { voiceService } from '@/lib/services/voiceService';
+import { BrowserSupport } from '@/lib/utils/browserSupport';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
 
 export default function Home() {
@@ -21,6 +24,9 @@ export default function Home() {
   // Interaction Mode State
   const [interactionMode, setInteractionMode] = useState<'type' | 'dictation' | 'voice'>('type');
   const [isTyping, setIsTyping] = useState(false);
+  const [isDictating, setIsDictating] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [dictationTranscript, setDictationTranscript] = useState('');
 
   // Remove useChat hook since we're not using it anymore
 
@@ -32,6 +38,9 @@ export default function Home() {
   async function initializeSession() {
     try {
       console.log('🚀 Initializing vedika-ai session...');
+      
+      // Log browser capabilities
+      BrowserSupport.logBrowserCapabilities();
       
       // Use the ensureSession method which handles validation and creation
       const sessionResult = await DeviceSessionApi.ensureSession();
@@ -65,6 +74,99 @@ export default function Home() {
     { id: 'dictation', icon: Mic, label: 'Dictation Mode', description: 'Dictate your input' },
     { id: 'voice', icon: MessageCircle, label: 'Voice Mode', description: 'Voice conversation' },
   ];
+
+  // Dictation Mode Handlers
+  const handleDictationStart = () => {
+    console.log('🎤 Dictation start clicked');
+    console.log('Current state:', { isDictating, isVoiceMode, interactionMode, isTyping });
+    console.log('Dictation service supported:', dictationService.isSupported());
+    
+    if (!dictationService.isSupported()) {
+      console.error('Speech recognition not supported');
+      setError('Speech recognition is not supported in this browser');
+      return;
+    }
+
+    console.log('Starting dictation...');
+    setIsDictating(true);
+    setDictationTranscript('');
+    setInputValue('');
+
+    const success = dictationService.startListening({
+      onResult: (result) => {
+        console.log('🎤 Dictation result:', result);
+        if (result.isFinal) {
+          setInputValue(result.transcript);
+          setDictationTranscript('');
+        } else {
+          setDictationTranscript(result.transcript);
+        }
+      },
+      onError: (error) => {
+        console.error('🎤 Dictation error:', error);
+        setError(error);
+        setIsDictating(false);
+      },
+      onEnd: () => {
+        console.log('🎤 Dictation ended');
+        setIsDictating(false);
+      }
+    });
+
+    console.log('Dictation start result:', success);
+  };
+
+  const handleDictationStop = () => {
+    dictationService.stopListening();
+    setIsDictating(false);
+  };
+
+  // Voice Mode Handlers
+  const handleVoiceStart = () => {
+    if (!voiceService.isSupported()) {
+      setError('Voice mode is not supported in this browser');
+      return;
+    }
+
+    setIsVoiceMode(true);
+    setInputValue('');
+
+    voiceService.startVoiceConversation({
+      onError: (error) => {
+        setError(error);
+        setIsVoiceMode(false);
+      },
+      onTranscriptionUpdate: (transcript, isFinal) => {
+        if (isFinal) {
+          setInputValue(transcript);
+        }
+      }
+    });
+  };
+
+  const handleVoiceStop = () => {
+    voiceService.stopVoiceConversation();
+    setIsVoiceMode(false);
+  };
+
+  // Handle interaction mode changes
+  const handleInteractionModeChange = (mode: 'type' | 'dictation' | 'voice') => {
+    setInteractionMode(mode);
+    
+    // Stop any active recording when switching modes
+    if (isDictating) {
+      handleDictationStop();
+    }
+    if (isVoiceMode) {
+      handleVoiceStop();
+    }
+    
+    // Clear input when switching to dictation or voice mode
+    if (mode === 'dictation' || mode === 'voice') {
+      setInputValue('');
+      setIsTyping(false);
+    }
+  };
 
   return (
     <div className="flex justify-center h-full bg-white pt-48 pb-8">
@@ -109,6 +211,7 @@ export default function Home() {
                   request_type: 'anonymous',
                   model_id: 'best',
                   query_type: selectedAgent === 'search' ? 'general' : selectedAgent === 'research' ? 'analytical' : 'technical',
+                  interaction_mode: interactionMode,
                 }),
               });
 
@@ -173,7 +276,7 @@ export default function Home() {
             <div className="relative">
               <input
                 type="text"
-                value={inputValue}
+                value={dictationTranscript || inputValue}
                 onChange={(e) => {
                   console.log('📝 Input changed:', e.target.value);
                   setInputValue(e.target.value);
@@ -186,9 +289,15 @@ export default function Home() {
                     setIsTyping(false);
                   }
                 }}
-                placeholder="Ask me anything about your business or get help with your tasks."
+                placeholder={
+                  interactionMode === 'dictation' 
+                    ? (isDictating ? "Listening... Speak now" : "Click microphone to start dictating")
+                    : interactionMode === 'voice'
+                    ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
+                    : "Ask me anything about your business or get help with your tasks."
+                }
                 className="w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left"
-                disabled={isLoading || !sessionReady}
+                disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
             </div>
 
@@ -224,21 +333,62 @@ export default function Home() {
                 {!isTyping ? (
                   /* Show Interaction Mode Buttons when not typing */
                   <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
+                    {/* Test button to verify clicks work */}
+                    <button
+                      type="button"
+                      onClick={() => console.log('🧪 TEST BUTTON CLICKED - CLICKS ARE WORKING!')}
+                      className="p-1.5 rounded-md bg-red-500 text-white text-xs mr-2"
+                      title="Test button - check console"
+                    >
+                      TEST
+                    </button>
+                    
                     {interactionModes.map((mode) => {
                       const Icon = mode.icon;
                       const isSelected = interactionMode === mode.id;
+                      const isActive = (mode.id === 'dictation' && isDictating) || (mode.id === 'voice' && isVoiceMode);
                       
                       return (
                         <button
                           key={mode.id}
                           type="button"
-                          onClick={() => setInteractionMode(mode.id as 'type' | 'dictation' | 'voice')}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔘 Interaction mode button clicked:', mode.id);
+                            console.log('🔘 Button element:', e.currentTarget);
+                            console.log('🔘 Event type:', e.type);
+                            
+                            if (mode.id === 'dictation') {
+                              console.log('🎤 Dictation button clicked, isDictating:', isDictating);
+                              if (isDictating) {
+                                handleDictationStop();
+                              } else {
+                                handleDictationStart();
+                              }
+                            } else if (mode.id === 'voice') {
+                              console.log('🎙️ Voice button clicked, isVoiceMode:', isVoiceMode);
+                              if (isVoiceMode) {
+                                handleVoiceStop();
+                              } else {
+                                handleVoiceStart();
+                              }
+                            } else {
+                              handleInteractionModeChange(mode.id as 'type' | 'dictation' | 'voice');
+                            }
+                          }}
                           className={`p-1.5 rounded-md transition-all ${
-                            isSelected
+                            isSelected || isActive
                               ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
                               : 'bg-white text-secondary-600 hover:bg-secondary-100'
-                          }`}
-                          title={mode.description}
+                          } ${isActive ? 'animate-pulse' : ''}`}
+                          title={
+                            mode.id === 'dictation' 
+                              ? (isDictating ? 'Stop dictation' : mode.description)
+                              : mode.id === 'voice'
+                              ? (isVoiceMode ? 'Stop voice conversation' : mode.description)
+                              : mode.description
+                          }
                           disabled={isLoading}
                         >
                           <Icon className="w-2.5 h-2.5" />
@@ -255,6 +405,7 @@ export default function Home() {
                       console.log('🖱️ Submit button clicked');
                       console.log('Button disabled state:', isLoading || !inputValue?.trim() || !sessionReady);
                       console.log('Input value when clicked:', inputValue);
+                      console.log('Interaction mode:', interactionMode);
                       // The form onSubmit will handle the actual submission
                     }}
                     className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"

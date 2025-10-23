@@ -6,6 +6,8 @@ import { DeviceManager } from '@/lib/utils/deviceManager';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
+import { dictationService } from '@/lib/services/dictationService';
+import { voiceService } from '@/lib/services/voiceService';
 import type { Message } from '@/lib/types/api';
 import { Send, Search, FileText, Sparkles, Type, Mic, MessageCircle } from 'lucide-react';
 
@@ -34,6 +36,9 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   // Interaction Mode State
   const [interactionMode, setInteractionMode] = useState<'type' | 'dictation' | 'voice'>('type');
   const [isTyping, setIsTyping] = useState(false);
+  const [isDictating, setIsDictating] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [dictationTranscript, setDictationTranscript] = useState('');
 
   // Agent definitions
   const agents = [
@@ -125,6 +130,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           request_type: 'anonymous',
           model_id: 'best',
           query_type: selectedAgent === 'search' ? 'general' : selectedAgent === 'research' ? 'analytical' : 'technical',
+          interaction_mode: interactionMode,
         }),
       });
 
@@ -257,6 +263,88 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     }
   }
 
+  // Dictation Mode Handlers
+  const handleDictationStart = () => {
+    if (!dictationService.isSupported()) {
+      setError('Speech recognition is not supported in this browser');
+      return;
+    }
+
+    setIsDictating(true);
+    setDictationTranscript('');
+    setInput('');
+
+    dictationService.startListening({
+      onResult: (result) => {
+        if (result.isFinal) {
+          setInput(result.transcript);
+          setDictationTranscript('');
+        } else {
+          setDictationTranscript(result.transcript);
+        }
+      },
+      onError: (error) => {
+        setError(error);
+        setIsDictating(false);
+      },
+      onEnd: () => {
+        setIsDictating(false);
+      }
+    });
+  };
+
+  const handleDictationStop = () => {
+    dictationService.stopListening();
+    setIsDictating(false);
+  };
+
+  // Voice Mode Handlers
+  const handleVoiceStart = () => {
+    if (!voiceService.isSupported()) {
+      setError('Voice mode is not supported in this browser');
+      return;
+    }
+
+    setIsVoiceMode(true);
+    setInput('');
+
+    voiceService.startVoiceConversation({
+      onError: (error) => {
+        setError(error);
+        setIsVoiceMode(false);
+      },
+      onTranscriptionUpdate: (transcript, isFinal) => {
+        if (isFinal) {
+          setInput(transcript);
+        }
+      }
+    });
+  };
+
+  const handleVoiceStop = () => {
+    voiceService.stopVoiceConversation();
+    setIsVoiceMode(false);
+  };
+
+  // Handle interaction mode changes
+  const handleInteractionModeChange = (mode: 'type' | 'dictation' | 'voice') => {
+    setInteractionMode(mode);
+    
+    // Stop any active recording when switching modes
+    if (isDictating) {
+      handleDictationStop();
+    }
+    if (isVoiceMode) {
+      handleVoiceStop();
+    }
+    
+    // Clear input when switching to dictation or voice mode
+    if (mode === 'dictation' || mode === 'voice') {
+      setInput('');
+      setIsTyping(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
@@ -338,11 +426,17 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             <div className="relative">
               <input
                 type="text"
-                value={input}
+                value={dictationTranscript || input}
                 onChange={handleInputChange}
-                placeholder="Ask a Follow-up Question"
+                placeholder={
+                  interactionMode === 'dictation' 
+                    ? (isDictating ? "Listening... Speak now" : "Click microphone to start dictating")
+                    : interactionMode === 'voice'
+                    ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
+                    : "Ask a Follow-up Question"
+                }
                 className="w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left"
-                disabled={isLoading || !sessionReady}
+                disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
             </div>
 
@@ -381,18 +475,41 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                     {interactionModes.map((mode) => {
                       const Icon = mode.icon;
                       const isSelected = interactionMode === mode.id;
+                      const isActive = (mode.id === 'dictation' && isDictating) || (mode.id === 'voice' && isVoiceMode);
                       
                       return (
                         <button
                           key={mode.id}
                           type="button"
-                          onClick={() => setInteractionMode(mode.id as 'type' | 'dictation' | 'voice')}
+                          onClick={() => {
+                            if (mode.id === 'dictation') {
+                              if (isDictating) {
+                                handleDictationStop();
+                              } else {
+                                handleDictationStart();
+                              }
+                            } else if (mode.id === 'voice') {
+                              if (isVoiceMode) {
+                                handleVoiceStop();
+                              } else {
+                                handleVoiceStart();
+                              }
+                            } else {
+                              handleInteractionModeChange(mode.id as 'type' | 'dictation' | 'voice');
+                            }
+                          }}
                           className={`p-1.5 rounded-md transition-all ${
-                            isSelected
+                            isSelected || isActive
                               ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
                               : 'bg-white text-secondary-600 hover:bg-secondary-100'
-                          }`}
-                          title={mode.description}
+                          } ${isActive ? 'animate-pulse' : ''}`}
+                          title={
+                            mode.id === 'dictation' 
+                              ? (isDictating ? 'Stop dictation' : mode.description)
+                              : mode.id === 'voice'
+                              ? (isVoiceMode ? 'Stop voice conversation' : mode.description)
+                              : mode.description
+                          }
                           disabled={isLoading}
                         >
                           <Icon className="w-2.5 h-2.5" />
