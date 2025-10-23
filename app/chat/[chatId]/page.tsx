@@ -7,7 +7,7 @@ import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
 import type { Message } from '@/lib/types/api';
-import { Send, Search, FileText, Sparkles } from 'lucide-react';
+import { Send, Search, FileText, Sparkles, Type, Mic, MessageCircle } from 'lucide-react';
 
 interface ChatPageProps {
   params: Promise<{
@@ -30,12 +30,22 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState('search');
+  
+  // Interaction Mode State
+  const [interactionMode, setInteractionMode] = useState<'type' | 'dictation' | 'voice'>('type');
+  const [isTyping, setIsTyping] = useState(false);
 
   // Agent definitions
   const agents = [
     { id: 'search', label: 'Search', icon: Search },
     { id: 'research', label: 'Research', icon: FileText },
     { id: 'agents', label: 'Agents', icon: Sparkles },
+  ];
+
+  const interactionModes = [
+    { id: 'type', icon: Type, label: 'Type Mode', description: 'Type your input' },
+    { id: 'dictation', icon: Mic, label: 'Dictation Mode', description: 'Dictate your input' },
+    { id: 'voice', icon: MessageCircle, label: 'Voice Mode', description: 'Voice conversation' },
   ];
 
   // Initialize session on mount - optimized to skip if session exists
@@ -69,6 +79,14 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   // Manual input change handler
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
+    
+    // When user starts typing, switch to type mode and hide other modes
+    if (e.target.value.length > 0 && !isTyping) {
+      setIsTyping(true);
+      setInteractionMode('type');
+    } else if (e.target.value.length === 0 && isTyping) {
+      setIsTyping(false);
+    }
   };
 
   // Manual form submission handler
@@ -355,15 +373,43 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                 })}
               </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={!sessionReady || isLoading || !input?.trim()}
-                className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                title={!sessionReady ? 'Initializing session...' : undefined}
-              >
-                <Send className="w-2.5 h-2.5" />
-              </button>
+              {/* Right Side: Interaction Modes or Submit Button */}
+              <div className="flex items-center gap-2">
+                {!isTyping ? (
+                  /* Show Interaction Mode Buttons when not typing */
+                  interactionModes.map((mode) => {
+                    const Icon = mode.icon;
+                    const isSelected = interactionMode === mode.id;
+                    
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setInteractionMode(mode.id as 'type' | 'dictation' | 'voice')}
+                        className={`p-1.5 rounded-lg transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg'
+                            : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
+                        }`}
+                        title={mode.description}
+                        disabled={isLoading}
+                      >
+                        <Icon className="w-2.5 h-2.5" />
+                      </button>
+                    );
+                  })
+                ) : (
+                  /* Show Submit Button when typing */
+                  <button
+                    type="submit"
+                    disabled={!sessionReady || isLoading || !input?.trim()}
+                    className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                    title={!sessionReady ? 'Initializing session...' : 'Send message'}
+                  >
+                    <Send className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </form>

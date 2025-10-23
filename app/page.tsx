@@ -7,7 +7,7 @@ import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
-import { Search, FileText, Sparkles, Send } from 'lucide-react';
+import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -17,6 +17,10 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Interaction Mode State
+  const [interactionMode, setInteractionMode] = useState<'type' | 'dictation' | 'voice'>('type');
+  const [isTyping, setIsTyping] = useState(false);
 
   // Remove useChat hook since we're not using it anymore
 
@@ -54,6 +58,12 @@ export default function Home() {
     { id: 'search', icon: Search, label: 'Search' },
     { id: 'research', icon: FileText, label: 'Research' },
     { id: 'agents', icon: Sparkles, label: 'Agents' },
+  ];
+
+  const interactionModes = [
+    { id: 'type', icon: Type, label: 'Type Mode', description: 'Type your input' },
+    { id: 'dictation', icon: Mic, label: 'Dictation Mode', description: 'Dictate your input' },
+    { id: 'voice', icon: MessageCircle, label: 'Voice Mode', description: 'Voice conversation' },
   ];
 
   return (
@@ -167,6 +177,14 @@ export default function Home() {
                 onChange={(e) => {
                   console.log('📝 Input changed:', e.target.value);
                   setInputValue(e.target.value);
+                  
+                  // When user starts typing, switch to type mode and hide other modes
+                  if (e.target.value.length > 0 && !isTyping) {
+                    setIsTyping(true);
+                    setInteractionMode('type');
+                  } else if (e.target.value.length === 0 && isTyping) {
+                    setIsTyping(false);
+                  }
                 }}
                 placeholder="Ask me anything about your business or get help with your tasks."
                 className="w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left"
@@ -174,7 +192,7 @@ export default function Home() {
               />
             </div>
 
-            {/* Bottom Bar with Agents and Submit */}
+            {/* Bottom Bar with Agents and Interaction Modes/Submit */}
             <div className="flex items-center justify-between px-6 py-4 bg-stone-50 border-t border-primary-200">
               {/* Agent Selection */}
               <div className="flex gap-2">
@@ -201,21 +219,49 @@ export default function Home() {
                 })}
               </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading || !inputValue?.trim() || !sessionReady}
-                onClick={(e) => {
-                  console.log('🖱️ Submit button clicked');
-                  console.log('Button disabled state:', isLoading || !inputValue?.trim() || !sessionReady);
-                  console.log('Input value when clicked:', inputValue);
-                  // The form onSubmit will handle the actual submission
-                }}
-                className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                title="Send message"
-              >
-                <Send className="w-2.5 h-2.5" />
-              </button>
+              {/* Right Side: Interaction Modes or Submit Button */}
+              <div className="flex items-center gap-2">
+                {!isTyping ? (
+                  /* Show Interaction Mode Buttons when not typing */
+                  interactionModes.map((mode) => {
+                    const Icon = mode.icon;
+                    const isSelected = interactionMode === mode.id;
+                    
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setInteractionMode(mode.id as 'type' | 'dictation' | 'voice')}
+                        className={`p-1.5 rounded-lg transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg'
+                            : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
+                        }`}
+                        title={mode.description}
+                        disabled={isLoading}
+                      >
+                        <Icon className="w-2.5 h-2.5" />
+                      </button>
+                    );
+                  })
+                ) : (
+                  /* Show Submit Button when typing */
+                  <button
+                    type="submit"
+                    disabled={isLoading || !inputValue?.trim() || !sessionReady}
+                    onClick={(e) => {
+                      console.log('🖱️ Submit button clicked');
+                      console.log('Button disabled state:', isLoading || !inputValue?.trim() || !sessionReady);
+                      console.log('Input value when clicked:', inputValue);
+                      // The form onSubmit will handle the actual submission
+                    }}
+                    className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                    title="Send message"
+                  >
+                    <Send className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
