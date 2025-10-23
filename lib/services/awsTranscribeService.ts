@@ -39,10 +39,18 @@ export class AWSTranscribeService {
       const accessKey = process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID;
       const secretKey = process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY;
       
+      console.log('🔍 AWS Credentials Check:', {
+        accessKey: accessKey ? `${accessKey.substring(0, 4)}...` : 'NOT SET',
+        secretKey: secretKey ? `${secretKey.substring(0, 4)}...` : 'NOT SET',
+        region: process.env.NEXT_PUBLIC_AWS_REGION || 'NOT SET'
+      });
+      
       if (!accessKey || accessKey === 'your_access_key_here' || 
           !secretKey || secretKey === 'your_secret_key_here') {
-        console.warn('⚠️ AWS credentials not configured, using fallback simulation');
-        return this.startFallbackSimulation();
+        console.error('❌ AWS credentials not configured properly');
+        console.error('📝 Please update .env.local with real AWS credentials');
+        this.onError?.('AWS credentials not configured. Please add real AWS Access Key ID and Secret Access Key to .env.local');
+        return false;
       }
       
       // Get microphone with noise cancellation
@@ -93,55 +101,7 @@ export class AWSTranscribeService {
       
     } catch (error) {
       console.error('❌ Failed to start AWS Transcribe:', error);
-      console.log('🔄 Falling back to simulation mode...');
-      return this.startFallbackSimulation();
-    }
-  }
-
-  private async startFallbackSimulation(): Promise<boolean> {
-    try {
-      console.log('🎤 Starting fallback simulation mode...');
-      
-      // Get microphone permission for realistic experience
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          noiseSuppression: true,
-          echoCancellation: true,
-          autoGainControl: true
-        }
-      });
-      
-      console.log('✅ Microphone granted for simulation');
-      this.isStreaming = true;
-      
-      // Simulate real-time transcription
-      setTimeout(() => {
-        if (this.isStreaming) {
-          console.log('📝 Simulating interim result...');
-          this.onTranscript?.('Hello...', true);
-        }
-      }, 1000);
-      
-      setTimeout(() => {
-        if (this.isStreaming) {
-          console.log('📝 Simulating interim result...');
-          this.onTranscript?.('Hello world...', true);
-        }
-      }, 2000);
-      
-      setTimeout(() => {
-        if (this.isStreaming) {
-          console.log('✅ Simulating final result...');
-          this.onTranscript?.('Hello world', false);
-          this.stopTranscription();
-        }
-      }, 3000);
-      
-      return true;
-      
-    } catch (error) {
-      console.error('❌ Fallback simulation failed:', error);
-      this.onError?.(error instanceof Error ? error.message : 'Failed');
+      this.onError?.(error instanceof Error ? error.message : 'Failed to start AWS Transcribe');
       return false;
     }
   }
