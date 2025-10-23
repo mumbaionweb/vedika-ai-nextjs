@@ -208,6 +208,10 @@ export class DictationService {
           maxAlternatives: this.recognition.maxAlternatives
         });
         this.isListening = true;
+        
+        // Set up audio monitoring for speech recognition
+        this.setupAudioMonitoring();
+        
         if (this.callbacks.onStart) {
           this.callbacks.onStart();
         }
@@ -256,14 +260,46 @@ export class DictationService {
         });
       }
       
-      // Test microphone access
+      // Test microphone access and capture audio data
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         console.log('🎤 Testing microphone access...');
         navigator.mediaDevices.getUserMedia({ audio: true })
           .then((stream) => {
             console.log('🎤 Microphone access granted, stream:', stream);
-            // Stop the stream immediately as we just wanted to test access
-            stream.getTracks().forEach(track => track.stop());
+            console.log('🎤 Audio tracks:', stream.getAudioTracks());
+            
+            // Set up audio context to analyze audio data
+            if (typeof AudioContext !== 'undefined') {
+              const audioContext = new AudioContext();
+              const source = audioContext.createMediaStreamSource(stream);
+              const analyser = audioContext.createAnalyser();
+              analyser.fftSize = 256;
+              source.connect(analyser);
+              
+              const bufferLength = analyser.frequencyBinCount;
+              const dataArray = new Uint8Array(bufferLength);
+              
+              const checkAudio = () => {
+                analyser.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                console.log('🎤 Audio level:', average.toFixed(2));
+                
+                if (average > 10) {
+                  console.log('🎤 Audio detected! Level:', average.toFixed(2));
+                }
+              };
+              
+              // Check audio levels every 100ms
+              const audioCheckInterval = setInterval(checkAudio, 100);
+              
+              // Stop after 10 seconds
+              setTimeout(() => {
+                clearInterval(audioCheckInterval);
+                audioContext.close();
+                stream.getTracks().forEach(track => track.stop());
+                console.log('🎤 Audio monitoring stopped');
+              }, 10000);
+            }
           })
           .catch((error) => {
             console.error('🎤 Microphone access denied:', error);
@@ -496,6 +532,54 @@ export class DictationService {
     if (this.recognition) {
       this.recognition.lang = language;
     }
+  }
+
+  /**
+   * Set up audio monitoring to show what audio is being captured
+   */
+  private setupAudioMonitoring(): void {
+    if (typeof AudioContext === 'undefined') {
+      console.log('🎤 AudioContext not available for audio monitoring');
+      return;
+    }
+
+    // Get microphone access for audio monitoring
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        console.log('🎤 Setting up audio monitoring...');
+        
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        const monitorAudio = () => {
+          if (!this.isListening) {
+            audioContext.close();
+            stream.getTracks().forEach(track => track.stop());
+            console.log('🎤 Audio monitoring stopped');
+            return;
+          }
+          
+          analyser.getByteFrequencyData(dataArray);
+          const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+          
+          if (average > 5) {
+            console.log('🎤 Audio level:', average.toFixed(2), '| Frequency data:', dataArray.slice(0, 10));
+          }
+          
+          setTimeout(monitorAudio, 100);
+        };
+        
+        monitorAudio();
+      })
+      .catch((error) => {
+        console.error('🎤 Failed to set up audio monitoring:', error);
+      });
   }
 }
 
