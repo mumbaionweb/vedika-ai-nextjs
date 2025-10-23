@@ -328,15 +328,20 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
   // Handle interaction mode changes
   const handleInteractionModeChange = (mode: 'type' | 'dictation' | 'voice') => {
-    setInteractionMode(mode);
+    console.log('🔄 Switching interaction mode to:', mode);
+    console.log('🔄 Current state before switch:', { isDictating, isVoiceMode, interactionMode });
     
     // Stop any active recording when switching modes
-    if (isDictating) {
+    if (isDictating && mode !== 'dictation') {
+      console.log('🔄 Stopping dictation mode');
       handleDictationStop();
     }
-    if (isVoiceMode) {
+    if (isVoiceMode && mode !== 'voice') {
+      console.log('🔄 Stopping voice mode');
       handleVoiceStop();
     }
+    
+    setInteractionMode(mode);
     
     // Clear input when switching to dictation or voice mode
     if (mode === 'dictation' || mode === 'voice') {
@@ -484,17 +489,40 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                           onClick={() => {
                             if (mode.id === 'dictation') {
                               if (isDictating) {
+                                // Stop dictation
                                 handleDictationStop();
+                                handleInteractionModeChange('type');
                               } else {
+                                // Stop voice mode if active
+                                if (isVoiceMode) {
+                                  handleVoiceStop();
+                                }
+                                // Start dictation
                                 handleDictationStart();
+                                setInteractionMode('dictation');
                               }
                             } else if (mode.id === 'voice') {
                               if (isVoiceMode) {
+                                // Stop voice mode
                                 handleVoiceStop();
+                                handleInteractionModeChange('type');
                               } else {
+                                // Stop dictation if active
+                                if (isDictating) {
+                                  handleDictationStop();
+                                }
+                                // Start voice mode
                                 handleVoiceStart();
+                                setInteractionMode('voice');
                               }
                             } else {
+                              // Type mode - stop any active modes
+                              if (isDictating) {
+                                handleDictationStop();
+                              }
+                              if (isVoiceMode) {
+                                handleVoiceStop();
+                              }
                               handleInteractionModeChange(mode.id as 'type' | 'dictation' | 'voice');
                             }
                           }}

@@ -10,6 +10,7 @@ import { config } from '@/lib/config';
 import { dictationService } from '@/lib/services/dictationService';
 import { voiceService } from '@/lib/services/voiceService';
 import { BrowserSupport } from '@/lib/utils/browserSupport';
+import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
 
 export default function Home() {
@@ -150,17 +151,44 @@ export default function Home() {
     setIsVoiceMode(false);
   };
 
-  // Handle interaction mode changes
-  const handleInteractionModeChange = (mode: 'type' | 'dictation' | 'voice') => {
-    setInteractionMode(mode);
-    
-    // Stop any active recording when switching modes
-    if (isDictating) {
-      handleDictationStop();
-    }
+  // Voice Mode Popup Handlers
+  const handleVoiceModeClose = () => {
+    console.log('🎙️ Closing voice mode popup');
+    handleVoiceStop();
+    handleInteractionModeChange('type');
+  };
+
+  const handleVoiceModeToggleRecording = () => {
+    console.log('🎙️ Toggling voice recording, current state:', isVoiceMode);
     if (isVoiceMode) {
       handleVoiceStop();
+    } else {
+      handleVoiceStart();
     }
+  };
+
+  const handleVoiceModeSettings = () => {
+    console.log('🎙️ Opening voice mode settings');
+    // TODO: Implement voice mode settings
+    alert('Voice mode settings coming soon!');
+  };
+
+  // Handle interaction mode changes
+  const handleInteractionModeChange = (mode: 'type' | 'dictation' | 'voice') => {
+    console.log('🔄 Switching interaction mode to:', mode);
+    console.log('🔄 Current state before switch:', { isDictating, isVoiceMode, interactionMode });
+    
+    // Stop any active recording when switching modes
+    if (isDictating && mode !== 'dictation') {
+      console.log('🔄 Stopping dictation mode');
+      handleDictationStop();
+    }
+    if (isVoiceMode && mode !== 'voice') {
+      console.log('🔄 Stopping voice mode');
+      handleVoiceStop();
+    }
+    
+    setInteractionMode(mode);
     
     // Clear input when switching to dictation or voice mode
     if (mode === 'dictation' || mode === 'voice') {
@@ -363,18 +391,41 @@ export default function Home() {
                             if (mode.id === 'dictation') {
                               console.log('🎤 Dictation button clicked, isDictating:', isDictating);
                               if (isDictating) {
+                                // Stop dictation
                                 handleDictationStop();
+                                handleInteractionModeChange('type');
                               } else {
+                                // Stop voice mode if active
+                                if (isVoiceMode) {
+                                  handleVoiceStop();
+                                }
+                                // Start dictation
                                 handleDictationStart();
+                                setInteractionMode('dictation');
                               }
                             } else if (mode.id === 'voice') {
                               console.log('🎙️ Voice button clicked, isVoiceMode:', isVoiceMode);
                               if (isVoiceMode) {
+                                // Stop voice mode
                                 handleVoiceStop();
+                                handleInteractionModeChange('type');
                               } else {
+                                // Stop dictation if active
+                                if (isDictating) {
+                                  handleDictationStop();
+                                }
+                                // Start voice mode
                                 handleVoiceStart();
+                                setInteractionMode('voice');
                               }
                             } else {
+                              // Type mode - stop any active modes
+                              if (isDictating) {
+                                handleDictationStop();
+                              }
+                              if (isVoiceMode) {
+                                handleVoiceStop();
+                              }
                               handleInteractionModeChange(mode.id as 'type' | 'dictation' | 'voice');
                             }
                           }}
@@ -461,6 +512,15 @@ export default function Home() {
         </form>
 
       </div>
+
+      {/* Voice Mode Popup */}
+      <VoiceModePopup
+        isOpen={isVoiceMode}
+        onClose={handleVoiceModeClose}
+        isRecording={isVoiceMode}
+        onToggleRecording={handleVoiceModeToggleRecording}
+        onSettings={handleVoiceModeSettings}
+      />
     </div>
   );
 }
