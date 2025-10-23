@@ -10,6 +10,12 @@ export class SimpleDictationService {
   constructor() {
     console.log('🔧 Constructing SimpleDictationService...');
     
+    // Only initialize on client side
+    if (typeof window === 'undefined') {
+      console.log('🔧 Server-side rendering, skipping initialization');
+      return;
+    }
+    
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
@@ -193,6 +199,11 @@ export class SimpleDictationService {
   }
 
   async startListening(): Promise<boolean> {
+    if (typeof window === 'undefined') {
+      console.error('❌ Speech Recognition not available on server side');
+      return false;
+    }
+    
     if (!this.recognition) {
       console.error('❌ Speech Recognition not available');
       return false;
