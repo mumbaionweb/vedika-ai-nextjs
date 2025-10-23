@@ -198,9 +198,13 @@ export class SimpleDictationService {
       return false;
     }
     
+    // Always stop any existing recognition first
     if (this.isListening) {
-      console.warn('⚠️ Already listening');
-      return false;
+      console.warn('⚠️ Already listening, stopping first...');
+      this.recognition.stop();
+      this.isListening = false;
+      // Wait a bit for it to fully stop
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
     
     try {
@@ -235,8 +239,21 @@ export class SimpleDictationService {
       });
       
       console.log('🎤 About to call recognition.start()...');
-      this.recognition.start();
-      this.isListening = true;
+      try {
+        this.recognition.start();
+        this.isListening = true;
+      } catch (startError) {
+        console.error('❌ Error starting recognition:', startError);
+        if (startError instanceof Error && startError.message.includes('already started')) {
+          console.log('🔄 Recognition was already started, trying to stop and restart...');
+          this.recognition.stop();
+          await new Promise(resolve => setTimeout(resolve, 300));
+          this.recognition.start();
+          this.isListening = true;
+        } else {
+          throw startError;
+        }
+      }
       
       console.log('✅ Recognition.start() called successfully');
       console.log('👂 Listening... Speak now!');
