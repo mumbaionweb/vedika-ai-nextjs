@@ -80,6 +80,7 @@ export default function Home() {
     console.log('🎤 Dictation start clicked');
     console.log('Current state:', { isDictating, isVoiceMode, interactionMode, isTyping });
     console.log('Dictation service supported:', dictationService.isSupported());
+    console.log('Recognition state:', dictationService.getRecognitionState());
     
     if (!dictationService.isSupported()) {
       console.error('Speech recognition not supported');

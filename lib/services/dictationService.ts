@@ -81,13 +81,17 @@ export class DictationService {
       
       // Handle recognition errors
       this.recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
+        console.error('🎤 Speech recognition error:', event.error);
         this.isListening = false;
         
         if (this.callbacks.onError) {
           let errorMessage = 'Speech recognition error occurred';
           
           switch (event.error) {
+            case 'aborted':
+              console.log('🎤 Recognition was aborted - this is usually normal when stopping');
+              // Don't show error for aborted - it's expected when stopping
+              return;
             case 'no-speech':
               errorMessage = 'No speech was detected. Please try again.';
               break;
@@ -103,6 +107,11 @@ export class DictationService {
             case 'service-not-allowed':
               errorMessage = 'Speech recognition service is not available.';
               break;
+            case 'bad-grammar':
+              errorMessage = 'Speech recognition grammar error.';
+              break;
+            default:
+              errorMessage = `Speech recognition error: ${event.error}`;
           }
           
           this.callbacks.onError(errorMessage);
@@ -158,8 +167,26 @@ export class DictationService {
 
     try {
       console.log('🎤 Starting speech recognition...');
-      this.recognition.start();
-      console.log('🎤 Speech recognition started successfully');
+      
+      // Stop any existing recognition first
+      if (this.recognition && this.recognition.state === 'listening') {
+        console.log('🎤 Stopping existing recognition first');
+        this.recognition.stop();
+      }
+      
+      // Small delay to ensure previous recognition is stopped
+      setTimeout(() => {
+        try {
+          this.recognition.start();
+          console.log('🎤 Speech recognition started successfully');
+        } catch (startError) {
+          console.error('🎤 Failed to start speech recognition after delay:', startError);
+          if (this.callbacks.onError) {
+            this.callbacks.onError('Failed to start speech recognition');
+          }
+        }
+      }, 100);
+      
       return true;
     } catch (error) {
       console.error('🎤 Failed to start speech recognition:', error);
@@ -174,15 +201,27 @@ export class DictationService {
    * Stop listening for speech
    */
   public stopListening(): boolean {
-    if (!this.recognition || !this.isListening) {
+    console.log('🎤 Stopping speech recognition...');
+    console.log('🎤 Recognition object:', this.recognition);
+    console.log('🎤 Is listening:', this.isListening);
+    
+    if (!this.recognition) {
+      console.log('🎤 No recognition object to stop');
       return false;
     }
 
     try {
-      this.recognition.stop();
+      if (this.isListening) {
+        this.recognition.stop();
+        console.log('🎤 Speech recognition stopped');
+      } else {
+        console.log('🎤 Recognition was not listening, setting state to false');
+        this.isListening = false;
+      }
       return true;
     } catch (error) {
-      console.error('Failed to stop speech recognition:', error);
+      console.error('🎤 Failed to stop speech recognition:', error);
+      this.isListening = false;
       return false;
     }
   }
@@ -192,6 +231,14 @@ export class DictationService {
    */
   public getIsListening(): boolean {
     return this.isListening;
+  }
+
+  /**
+   * Get recognition state
+   */
+  public getRecognitionState(): string {
+    if (!this.recognition) return 'not-initialized';
+    return this.recognition.state || 'unknown';
   }
 
   /**
