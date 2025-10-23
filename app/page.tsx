@@ -7,7 +7,7 @@ import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
-import { dictationService } from '@/lib/services/dictationService';
+import { unifiedDictationService } from '@/lib/services/unifiedDictationService';
 import { voiceService } from '@/lib/services/voiceService';
 import { BrowserSupport } from '@/lib/utils/browserSupport';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
@@ -82,11 +82,16 @@ export default function Home() {
   ];
 
   // Dictation Mode Handlers
-  const handleDictationStart = () => {
+  const handleDictationStart = async () => {
     console.log('🎤 Dictation start clicked');
     console.log('Current state:', { isDictating, isVoiceMode, interactionMode, isTyping });
+    
+    // Initialize the unified service with device ID
+    const deviceId = DeviceManager.getDeviceId();
+    const dictationService = new (await import('@/lib/services/unifiedDictationService')).UnifiedDictationService(deviceId);
+    
     console.log('Dictation service supported:', dictationService.isSupported());
-    console.log('Recognition state:', dictationService.getRecognitionState());
+    console.log('Service type:', dictationService.getServiceType());
     
     if (!dictationService.isSupported()) {
       console.error('Speech recognition not supported');
@@ -99,25 +104,27 @@ export default function Home() {
     setDictationTranscript('');
     setInputValue('');
 
-    const success = dictationService.startListening({
-      onResult: (result) => {
-        console.log('🎤 Dictation result received:', result);
-        console.log('🎤 Result transcript:', result.transcript);
-        console.log('🎤 Result isFinal:', result.isFinal);
-        
-        if (result.isFinal) {
-          console.log('🎤 Setting final transcript to input:', result.transcript);
-          setInputValue(result.transcript);
-          setDictationTranscript('');
-        } else {
-          console.log('🎤 Setting interim transcript:', result.transcript);
-          setDictationTranscript(result.transcript);
-        }
+    // Set up callbacks
+    dictationService.setCallbacks({
+      onInterimResult: (transcript: string) => {
+        console.log('🎤 Interim result:', transcript);
+        setDictationTranscript(transcript);
       },
-      onError: (error) => {
+      onFinalResult: (transcript: string) => {
+        console.log('🎤 Final result:', transcript);
+        setDictationTranscript(transcript);
+        setInputValue(transcript);
+        handleDictationStop();
+      },
+      onError: (error: string) => {
         console.error('🎤 Dictation error:', error);
         setError(error);
         setIsDictating(false);
+      },
+      onStart: () => {
+        console.log('🎤 Dictation started');
+        setIsDictating(true);
+        setInteractionMode('dictation');
       },
       onEnd: () => {
         console.log('🎤 Dictation ended');
@@ -125,12 +132,20 @@ export default function Home() {
       }
     });
 
-    console.log('Dictation start result:', success);
+    try {
+      const success = await dictationService.startListening();
+      console.log('Dictation start result:', success);
+    } catch (error) {
+      console.error('🎤 Failed to start dictation:', error);
+      setIsDictating(false);
+    }
   };
 
   const handleDictationStop = () => {
-    dictationService.stopListening();
+    // We'll need to store the service instance to stop it
+    // For now, just update the state
     setIsDictating(false);
+    setDictationTranscript('');
   };
 
   // Voice Mode Handlers

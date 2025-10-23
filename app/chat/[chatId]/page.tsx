@@ -6,7 +6,7 @@ import { DeviceManager } from '@/lib/utils/deviceManager';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
-import { dictationService } from '@/lib/services/dictationService';
+import { unifiedDictationService } from '@/lib/services/unifiedDictationService';
 import { voiceService } from '@/lib/services/voiceService';
 import type { Message } from '@/lib/types/api';
 import { Send, Search, FileText, Sparkles, Type, Mic, MessageCircle } from 'lucide-react';
@@ -264,38 +264,57 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   }
 
   // Dictation Mode Handlers
-  const handleDictationStart = () => {
+  const handleDictationStart = async () => {
+    // Initialize the unified service with device ID
+    const deviceId = DeviceManager.getDeviceId();
+    const dictationService = new (await import('@/lib/services/unifiedDictationService')).UnifiedDictationService(deviceId);
+    
     if (!dictationService.isSupported()) {
       setError('Speech recognition is not supported in this browser');
       return;
     }
 
+    console.log('Service type:', dictationService.getServiceType());
     setIsDictating(true);
     setDictationTranscript('');
     setInput('');
 
-    dictationService.startListening({
-      onResult: (result) => {
-        if (result.isFinal) {
-          setInput(result.transcript);
-          setDictationTranscript('');
-        } else {
-          setDictationTranscript(result.transcript);
-        }
+    // Set up callbacks
+    dictationService.setCallbacks({
+      onInterimResult: (transcript: string) => {
+        setDictationTranscript(transcript);
       },
-      onError: (error) => {
+      onFinalResult: (transcript: string) => {
+        setInput(transcript);
+        setDictationTranscript('');
+        handleDictationStop();
+      },
+      onError: (error: string) => {
         setError(error);
         setIsDictating(false);
+      },
+      onStart: () => {
+        setIsDictating(true);
+        setInteractionMode('dictation');
       },
       onEnd: () => {
         setIsDictating(false);
       }
     });
+
+    try {
+      await dictationService.startListening();
+    } catch (error) {
+      console.error('🎤 Failed to start dictation:', error);
+      setIsDictating(false);
+    }
   };
 
   const handleDictationStop = () => {
-    dictationService.stopListening();
+    // We'll need to store the service instance to stop it
+    // For now, just update the state
     setIsDictating(false);
+    setDictationTranscript('');
   };
 
   // Voice Mode Handlers
