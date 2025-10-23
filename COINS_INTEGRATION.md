@@ -14,15 +14,15 @@ The Vedika Coins system has been integrated to display real-time usage data from
 - **Endpoint**: `/auth/device-session/validate`
 - **Method**: GET
 - **Authentication**: Uses device session for anonymous users
-- **Response**: Returns session data including `credits_remaining` and `daily_credits`
+- **Response**: Returns session data including `vedika_coins_remaining` and `daily_vedika_coins`
 
 ## 🔄 Data Flow
 
 1. **Component Mount**: `VedikaCoins` component mounts
 2. **Hook Initialization**: `useCoins` hook initializes and validates session
 3. **API Call**: `DeviceSessionApi.validateSession()` fetches session data from backend
-4. **Credits Extraction**: Hook extracts `credits_remaining` and `daily_credits` from session
-5. **Compute Used**: Calculate `usedCredits = daily_credits - credits_remaining`
+4. **Vedika Coins Extraction**: Hook extracts `vedika_coins_remaining` and `daily_vedika_coins` from session
+5. **Compute Used**: Calculate `usedCredits = daily_vedika_coins - vedika_coins_remaining`
 6. **UI Render**: Component displays `usedCredits/totalCredits`
 
 ## 📊 Data Structure
@@ -34,14 +34,14 @@ interface DeviceSessionResponse {
   expires_at: string;        // Session expiry timestamp
   max_conversations: number; // Max allowed conversations
   plan: string;              // User plan (free, basic, pro, enterprise)
-  daily_credits: number;     // Daily credit limit (e.g., 20)
-  credits_remaining: number; // Credits remaining today (e.g., 18)
+  daily_vedika_coins: number;     // Daily vedika coins limit (e.g., 20)
+  vedika_coins_remaining: number; // Vedika coins remaining today (e.g., 18)
   message: string;           // User-friendly message
 }
 
 // Computed values in useCoins hook:
-// usedCredits = daily_credits - credits_remaining (e.g., 20 - 18 = 2)
-// totalCredits = daily_credits (e.g., 20)
+// usedCredits = daily_vedika_coins - vedika_coins_remaining (e.g., 20 - 18 = 2)
+// totalCredits = daily_vedika_coins (e.g., 20)
 // Display format: "2/20"
 ```
 

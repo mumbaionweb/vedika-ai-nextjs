@@ -12,8 +12,8 @@ interface DeviceSessionResponse {
   expires_at: string;
   max_conversations: number;
   plan: string;
-  daily_credits: number;
-  credits_remaining: number;
+  daily_vedika_coins: number;
+  vedika_coins_remaining: number;
   message: string;
 }
 
@@ -57,7 +57,7 @@ export class DeviceSessionApi {
     
     console.log('✅ Device session created:', {
       sessionId: data.session_id,
-      credits: data.credits_remaining,
+      credits: data.vedika_coins_remaining,
       expiresAt: data.expires_at
     });
     
@@ -104,7 +104,7 @@ export class DeviceSessionApi {
       
       const data: DeviceSessionResponse = await response.json();
       console.log('✅ Session valid:', {
-        credits: data.credits_remaining,
+        credits: data.vedika_coins_remaining,
         expiresAt: data.expires_at
       });
       

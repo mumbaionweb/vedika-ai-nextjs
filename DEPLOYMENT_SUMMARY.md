@@ -24,7 +24,7 @@
 - React hook for managing credits state
 - Fetches data via session validation endpoint
 - Auto-refreshes on component mount
-- Computes used credits: `daily_credits - credits_remaining`
+- Computes used vedika coins: `daily_vedika_coins - vedika_coins_remaining`
 - Console logging for debugging
 
 #### 3. **API Integration Updates**
@@ -130,7 +130,7 @@ git checkout uat
 ✅ Session valid: {credits: 18, expiresAt: '...'}
 ✅ Session ready: {sessionId: '...', credits: 18}
 🪙 [useCoins] Fetching session/credits data...
-🪙 [useCoins] Session data: {creditsRemaining: 18, dailyCredits: 20}
+🪙 [useCoins] Session data: {vedikaCoinsRemaining: 18, dailyVedikaCoins: 20}
 🪙 [useCoins] Computed values: {usedCredits: 2, totalCredits: 20, ...}
 ```
 

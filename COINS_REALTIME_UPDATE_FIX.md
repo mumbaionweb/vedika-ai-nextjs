@@ -123,7 +123,7 @@ You should now see these logs when a message is sent:
 🪙 [useCoins] Fetching session/credits data...
 🔍 Validating session: ...
 ✅ Session valid: {credits: 17, expiresAt: '...'}
-🪙 [useCoins] Session data: {creditsRemaining: 17, dailyCredits: 20}
+🪙 [useCoins] Session data: {vedikaCoinsRemaining: 17, dailyVedikaCoins: 20}
 🪙 [useCoins] Computed values: {usedCredits: 3, totalCredits: 20, ...}
 ```
 

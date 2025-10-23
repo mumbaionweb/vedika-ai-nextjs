@@ -17,8 +17,8 @@ interface UseCoinsReturn {
 }
 
 export function useCoins(): UseCoinsReturn {
-  const [creditsRemaining, setCreditsRemaining] = useState<number>(0);
-  const [dailyCredits, setDailyCredits] = useState<number>(20);
+  const [vedikaCoinsRemaining, setVedikaCoinsRemaining] = useState<number>(0);
+  const [dailyVedikaCoins, setDailyVedikaCoins] = useState<number>(20);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,24 +32,24 @@ export function useCoins(): UseCoinsReturn {
       
       if (session) {
         console.log('🪙 [useCoins] Session data:', {
-          creditsRemaining: session.credits_remaining,
-          dailyCredits: session.daily_credits
+          vedikaCoinsRemaining: session.vedika_coins_remaining,
+          dailyVedikaCoins: session.daily_vedika_coins
         });
-        setCreditsRemaining(session.credits_remaining);
-        setDailyCredits(session.daily_credits);
+        setVedikaCoinsRemaining(session.vedika_coins_remaining);
+        setDailyVedikaCoins(session.daily_vedika_coins);
       } else {
         console.warn('⚠️ [useCoins] No valid session, creating new one...');
         const newSession = await DeviceSessionApi.createSession();
-        setCreditsRemaining(newSession.credits_remaining);
-        setDailyCredits(newSession.daily_credits);
+        setVedikaCoinsRemaining(newSession.vedika_coins_remaining);
+        setDailyVedikaCoins(newSession.daily_vedika_coins);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
       console.error('❌ [useCoins] Error fetching credits:', err);
       // Fallback to defaults on error
-      setCreditsRemaining(20);
-      setDailyCredits(20);
+      setVedikaCoinsRemaining(20);
+      setDailyVedikaCoins(20);
     } finally {
       setLoading(false);
     }
@@ -60,12 +60,12 @@ export function useCoins(): UseCoinsReturn {
   }, [fetchBalance]);
 
   // Computed values for easy display
-  const usedCredits = dailyCredits - creditsRemaining;
+  const usedCredits = dailyVedikaCoins - vedikaCoinsRemaining;
 
   console.log('🪙 [useCoins] Computed values:', {
     usedCredits,
-    totalCredits: dailyCredits,
-    remainingCredits: creditsRemaining,
+    totalCredits: dailyVedikaCoins,
+    remainingCredits: vedikaCoinsRemaining,
     loading,
     error
   });
@@ -75,7 +75,7 @@ export function useCoins(): UseCoinsReturn {
     error,
     refetch: fetchBalance,
     usedCredits,
-    totalCredits: dailyCredits,
-    remainingCredits: creditsRemaining,
+    totalCredits: dailyVedikaCoins,
+    remainingCredits: vedikaCoinsRemaining,
   };
 }
