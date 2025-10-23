@@ -201,14 +201,6 @@ export class SimpleDictationService {
         });
       }, 1000);
       
-      // Add a test to see if the callback system is working
-      setTimeout(() => {
-        console.log('🧪 TEST: Checking if callback system works...');
-        if (this.onInterimResult) {
-          console.log('🧪 TEST: Calling onInterimResult with test text...');
-          this.onInterimResult('Test interim result');
-        }
-      }, 3000);
       
       return true;
       
