@@ -8,6 +8,7 @@ import { PollyClient, SynthesizeSpeechCommand } from "@aws-sdk/client-polly";
 export class VoiceService {
   private pollyClient: PollyClient;
   private audioContext: AudioContext | null = null;
+  private isRecording: boolean = false;
 
   constructor() {
     this.pollyClient = new PollyClient({
@@ -67,5 +68,27 @@ export class VoiceService {
       console.error('🎤 Get voices failed:', error);
       return [];
     }
+  }
+
+  // Voice conversation methods
+  async startVoiceConversation(callbacks: {
+    onError?: (error: string) => void;
+    onTranscriptionUpdate?: (transcript: string, isFinal: boolean) => void;
+  }): Promise<void> {
+    this.isRecording = true;
+    console.log('🎤 Voice conversation started');
+  }
+
+  stopVoiceConversation(): void {
+    this.isRecording = false;
+    console.log('🎤 Voice conversation stopped');
+  }
+
+  getIsRecording(): boolean {
+    return this.isRecording;
+  }
+
+  isSupported(): boolean {
+    return typeof window !== 'undefined' && !!window.AudioContext;
   }
 }

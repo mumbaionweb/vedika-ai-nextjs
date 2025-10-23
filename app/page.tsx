@@ -10,8 +10,7 @@ import { config } from '@/lib/config';
 import { unifiedDictationService } from '@/lib/services/unifiedDictationService';
 import { InteractionService } from '@/lib/services/interactionService';
 import { checkBrowserSupport } from '@/lib/utils/browserSupport';
-import { voiceService } from '@/lib/services/voiceService';
-import { BrowserSupport } from '@/lib/utils/browserSupport';
+import { VoiceService } from '@/lib/services/voiceService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
 
@@ -31,6 +30,7 @@ export default function Home() {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [dictationTranscript, setDictationTranscript] = useState('');
   const [interactionService] = useState(() => new InteractionService());
+  const [voiceService] = useState(() => new VoiceService());
 
   // Remove useChat hook since we're not using it anymore
 
@@ -50,7 +50,7 @@ export default function Home() {
       console.log('🚀 Initializing vedika-ai session...');
       
       // Log browser capabilities
-      BrowserSupport.logBrowserCapabilities();
+      checkBrowserSupport();
       
       // Use the ensureSession method which handles validation and creation
       const sessionResult = await DeviceSessionApi.ensureSession();
@@ -163,11 +163,11 @@ export default function Home() {
     setInputValue('');
 
     voiceService.startVoiceConversation({
-      onError: (error) => {
+      onError: (error: string) => {
         setError(error);
         setIsVoiceMode(false);
       },
-      onTranscriptionUpdate: (transcript, isFinal) => {
+      onTranscriptionUpdate: (transcript: string, isFinal: boolean) => {
         if (isFinal) {
           setInputValue(transcript);
         }
