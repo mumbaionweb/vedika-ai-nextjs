@@ -76,12 +76,21 @@ export default function Home() {
     
     dictationService.onStart = () => {
       console.log('🎤 Dictation service started');
+      setDictationTranscript('Waiting for you to speak...');
+    };
+    
+    // Add a callback for when speech recognition actually starts
+    dictationService.onSpeechStart = () => {
+      console.log('🎤 Speech recognition actually started');
       setDictationTranscript('Listening...');
     };
     
     dictationService.onEnd = () => {
       console.log('🎤 Dictation service ended');
-      if (!dictationTranscript || dictationTranscript === 'Listening...' || dictationTranscript === 'Processing...') {
+      if (!dictationTranscript || 
+          dictationTranscript === 'Listening...' || 
+          dictationTranscript === 'Processing...' ||
+          dictationTranscript === 'Waiting for you to speak...') {
         setDictationTranscript('');
       }
     };

@@ -6,6 +6,7 @@
 export class SimpleDictationService {
   private recognition: any = null;
   private isListening = false;
+  private hasStartedListening = false;
 
   constructor() {
     // Only initialize on client side
@@ -33,7 +34,9 @@ export class SimpleDictationService {
       
       this.recognition.onstart = () => {
         console.log('🎤 Speech recognition started');
+        this.hasStartedListening = true;
         this.onStart?.();
+        this.onSpeechStart?.();
       };
       
       this.recognition.onresult = (event: any) => {
@@ -90,6 +93,7 @@ export class SimpleDictationService {
       this.recognition.onend = () => {
         console.log('🛑 Speech recognition ended');
         this.isListening = false;
+        this.hasStartedListening = false;
         this.onEnd?.();
         
         // Restart recognition if it ended unexpectedly (for continuous mode)
@@ -192,11 +196,19 @@ export class SimpleDictationService {
       console.log('🛑 Stopping speech recognition...');
       this.recognition.stop();
       this.isListening = false;
+      this.hasStartedListening = false;
     }
   }
 
   getIsListening(): boolean {
     return this.isListening;
+  }
+
+  getStatus(): 'waiting' | 'listening' | 'processing' | 'idle' {
+    if (!this.isListening) return 'idle';
+    if (!this.hasStartedListening) return 'waiting';
+    if (this.hasStartedListening) return 'listening';
+    return 'idle';
   }
 
   isSupported(): boolean {
@@ -211,5 +223,6 @@ export class SimpleDictationService {
   onFinalResult?: (text: string) => void;
   onError?: (error: string) => void;
   onStart?: () => void;
+  onSpeechStart?: () => void;
   onEnd?: () => void;
 }
