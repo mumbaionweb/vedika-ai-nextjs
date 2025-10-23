@@ -58,6 +58,12 @@ export class DictationService {
       // Handle recognition results
       this.recognition.onresult = (event: any) => {
         console.log('🎤 Speech recognition result:', event);
+        console.log('🎤 Event details:', {
+          resultIndex: event.resultIndex,
+          resultsLength: event.results.length,
+          results: event.results
+        });
+        
         let finalTranscript = '';
         let interimTranscript = '';
         
@@ -73,6 +79,8 @@ export class DictationService {
             interimTranscript += transcript;
           }
         }
+        
+        console.log('🎤 Transcripts:', { finalTranscript, interimTranscript });
         
         // Call onResult callback with interim results
         if (interimTranscript && this.callbacks.onResult) {
@@ -147,6 +155,12 @@ export class DictationService {
       this.recognition.onstart = () => {
         console.log('🎤 Speech recognition started');
         console.log('🎤 Recognition state after start:', this.recognition.state);
+        console.log('🎤 Recognition properties on start:', {
+          continuous: this.recognition.continuous,
+          interimResults: this.recognition.interimResults,
+          lang: this.recognition.lang,
+          maxAlternatives: this.recognition.maxAlternatives
+        });
         this.isListening = true;
         if (this.callbacks.onStart) {
           this.callbacks.onStart();
@@ -275,6 +289,23 @@ export class DictationService {
               }
             }
           }, 3000);
+          
+          // Add a test to see if recognition is detecting speech
+          setTimeout(() => {
+            if (this.isListening) {
+              console.log('🎤 Testing speech detection after 5 seconds...');
+              console.log('🎤 Recognition properties:', {
+                continuous: this.recognition.continuous,
+                interimResults: this.recognition.interimResults,
+                lang: this.recognition.lang,
+                maxAlternatives: this.recognition.maxAlternatives
+              });
+              
+              // Check if there are any issues with the recognition
+              console.log('🎤 Recognition object keys:', Object.keys(this.recognition));
+              console.log('🎤 Recognition object:', this.recognition);
+            }
+          }, 5000);
           
         } catch (startError) {
           console.error('🎤 Failed to start speech recognition after delay:', startError);
