@@ -102,6 +102,37 @@ export class DictationService {
         }
       };
       
+      // Add debugging for when no speech is detected
+      this.recognition.onnomatch = (event: any) => {
+        console.log('🎤 No speech match detected:', event);
+        console.log('🎤 This means speech was detected but not recognized');
+      };
+      
+      // Add debugging for audio events
+      this.recognition.onaudiostart = () => {
+        console.log('🎤 Audio input started');
+      };
+      
+      this.recognition.onaudioend = () => {
+        console.log('🎤 Audio input ended');
+      };
+      
+      this.recognition.onsoundstart = () => {
+        console.log('🎤 Sound detected');
+      };
+      
+      this.recognition.onsoundend = () => {
+        console.log('🎤 Sound ended');
+      };
+      
+      this.recognition.onspeechstart = () => {
+        console.log('🎤 Speech detected');
+      };
+      
+      this.recognition.onspeechend = () => {
+        console.log('🎤 Speech ended');
+      };
+      
       // Handle recognition errors
       this.recognition.onerror = (event: any) => {
         console.error('🎤 Speech recognition error:', event.error);
@@ -331,16 +362,25 @@ export class DictationService {
               // Test if we can manually trigger speech detection
               console.log('🎤 Testing manual speech detection...');
               try {
-                // Try to restart recognition to see if it helps
-                console.log('🎤 Attempting to restart recognition...');
-                this.recognition.stop();
-                setTimeout(() => {
+                // Check if recognition is already running before trying to restart
+                console.log('🎤 Checking if recognition can be restarted...');
+                if (this.isListening) {
+                  console.log('🎤 Recognition is already running, skipping restart test');
+                } else {
+                  console.log('🎤 Recognition not running, attempting to start...');
                   this.recognition.start();
-                  console.log('🎤 Recognition restarted for testing');
-                }, 100);
+                  console.log('🎤 Recognition started for testing');
+                }
               } catch (restartError) {
                 console.error('🎤 Failed to restart recognition:', restartError);
               }
+              
+              // Add additional debugging for speech detection
+              console.log('🎤 Speech detection debugging:');
+              console.log('🎤 - Try speaking clearly into your microphone');
+              console.log('🎤 - Make sure your microphone is not muted');
+              console.log('🎤 - Check if other applications can hear your microphone');
+              console.log('🎤 - Try speaking louder or closer to the microphone');
             }
           }, 5000);
           
