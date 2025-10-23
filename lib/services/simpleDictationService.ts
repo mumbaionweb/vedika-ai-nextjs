@@ -172,13 +172,19 @@ export class SimpleDictationService {
 
     // CRITICAL: onerror
     this.recognition.onerror = (event: any) => {
-      console.error('═══════════════════════════════════════');
-      console.error('❌ [EVENT] Recognition error:', event.error);
-      console.error('📊 Error event:', event);
-      console.error('═══════════════════════════════════════');
-      
-      if (typeof this.onError === 'function') {
-        this.onError(event.error);
+      try {
+        console.error('═══════════════════════════════════════');
+        console.error('❌ [EVENT] Recognition error:', event?.error || 'Unknown error');
+        console.error('📊 Error event:', event);
+        console.error('📊 Error type:', typeof event);
+        console.error('📊 Error keys:', event ? Object.keys(event) : 'No event object');
+        console.error('═══════════════════════════════════════');
+        
+        if (typeof this.onError === 'function') {
+          this.onError(event?.error || 'Unknown speech recognition error');
+        }
+      } catch (errorHandlerError) {
+        console.error('❌ Error in error handler:', errorHandlerError);
       }
     };
 
@@ -276,6 +282,9 @@ export class SimpleDictationService {
     } catch (error) {
       console.error('═══════════════════════════════════════');
       console.error('❌ Failed to start:', error);
+      console.error('📊 Error type:', typeof error);
+      console.error('📊 Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('📊 Error stack:', error instanceof Error ? error.stack : 'No stack');
       console.error('═══════════════════════════════════════');
       if (typeof this.onError === 'function') {
         this.onError(error instanceof Error ? error.message : 'Failed to start');
