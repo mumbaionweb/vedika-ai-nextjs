@@ -53,6 +53,28 @@ export class DictationService {
       this.recognition.lang = 'en-US';
       this.recognition.maxAlternatives = 1;
       
+      // Try different language settings
+      console.log('🎤 Trying different language settings...');
+      this.recognition.lang = 'en-US';
+      
+      // Add timeout to force result processing
+      setTimeout(() => {
+        if (this.isListening && this.recognition) {
+          console.log('🎤 Forcing recognition to process results...');
+          // Try to manually trigger result processing
+          try {
+            this.recognition.stop();
+            setTimeout(() => {
+              if (this.recognition) {
+                this.recognition.start();
+              }
+            }, 100);
+          } catch (error) {
+            console.log('🎤 Error forcing recognition restart:', error);
+          }
+        }
+      }, 5000);
+      
       console.log('🎤 Recognition configured with settings');
       
       // Handle recognition results
@@ -268,6 +290,13 @@ export class DictationService {
             console.log('🎤 Microphone access granted, stream:', stream);
             console.log('🎤 Audio tracks:', stream.getAudioTracks());
             
+            // Check audio track settings
+            const audioTrack = stream.getAudioTracks()[0];
+            if (audioTrack) {
+              console.log('🎤 Audio track settings:', audioTrack.getSettings());
+              console.log('🎤 Audio track capabilities:', audioTrack.getCapabilities());
+            }
+            
             // Set up audio context to analyze audio data
             if (typeof AudioContext !== 'undefined') {
               const audioContext = new AudioContext();
@@ -304,6 +333,25 @@ export class DictationService {
           .catch((error) => {
             console.error('🎤 Microphone access denied:', error);
           });
+      }
+      
+      // Test Speech Recognition API availability
+      console.log('🎤 Testing Speech Recognition API...');
+      console.log('🎤 SpeechRecognition available:', typeof SpeechRecognition !== 'undefined');
+      console.log('🎤 webkitSpeechRecognition available:', typeof webkitSpeechRecognition !== 'undefined');
+      
+      // Try creating a test recognition instance
+      try {
+        const testRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        console.log('🎤 Test recognition instance created:', testRecognition);
+        console.log('🎤 Test recognition properties:', {
+          continuous: testRecognition.continuous,
+          interimResults: testRecognition.interimResults,
+          lang: testRecognition.lang,
+          maxAlternatives: testRecognition.maxAlternatives
+        });
+      } catch (error) {
+        console.error('🎤 Error creating test recognition:', error);
       }
       
       // Stop any existing recognition first
