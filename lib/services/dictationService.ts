@@ -42,12 +42,15 @@ export class DictationService {
       
       // Handle recognition results
       this.recognition.onresult = (event: any) => {
+        console.log('🎤 Speech recognition result:', event);
         let finalTranscript = '';
         let interimTranscript = '';
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
           const confidence = event.results[i][0].confidence;
+          
+          console.log(`🎤 Result ${i}:`, { transcript, confidence, isFinal: event.results[i].isFinal });
           
           if (event.results[i].isFinal) {
             finalTranscript += transcript;
@@ -58,6 +61,7 @@ export class DictationService {
         
         // Call onResult callback with interim results
         if (interimTranscript && this.callbacks.onResult) {
+          console.log('🎤 Sending interim result:', interimTranscript);
           this.callbacks.onResult({
             transcript: interimTranscript,
             isFinal: false,
@@ -66,6 +70,7 @@ export class DictationService {
         
         // Call onResult callback with final results
         if (finalTranscript && this.callbacks.onResult) {
+          console.log('🎤 Sending final result:', finalTranscript);
           this.callbacks.onResult({
             transcript: finalTranscript,
             isFinal: true,
@@ -114,6 +119,7 @@ export class DictationService {
       
       // Handle recognition start
       this.recognition.onstart = () => {
+        console.log('🎤 Speech recognition started');
         this.isListening = true;
         if (this.callbacks.onStart) {
           this.callbacks.onStart();
@@ -128,7 +134,12 @@ export class DictationService {
    * Start listening for speech
    */
   public startListening(callbacks?: DictationCallbacks): boolean {
+    console.log('🎤 DictationService.startListening called');
+    console.log('🎤 Recognition object:', this.recognition);
+    console.log('🎤 Is listening:', this.isListening);
+    
     if (!this.recognition) {
+      console.error('🎤 No recognition object available');
       if (callbacks?.onError) {
         callbacks.onError('Speech recognition is not supported in this browser');
       }
@@ -136,7 +147,7 @@ export class DictationService {
     }
 
     if (this.isListening) {
-      console.warn('Already listening for speech');
+      console.warn('🎤 Already listening for speech');
       return false;
     }
 
@@ -146,10 +157,12 @@ export class DictationService {
     }
 
     try {
+      console.log('🎤 Starting speech recognition...');
       this.recognition.start();
+      console.log('🎤 Speech recognition started successfully');
       return true;
     } catch (error) {
-      console.error('Failed to start speech recognition:', error);
+      console.error('🎤 Failed to start speech recognition:', error);
       if (this.callbacks.onError) {
         this.callbacks.onError('Failed to start speech recognition');
       }
