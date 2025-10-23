@@ -25,17 +25,32 @@ export class SimpleDictationService {
       
       this.recognition.onstart = () => {
         console.log('🎤 Speech recognition started');
+        this.onStart?.();
       };
       
       this.recognition.onresult = (event: any) => {
         console.log('📝 Got speech recognition result:', event);
+        console.log('📝 Result details:', {
+          resultIndex: event.resultIndex,
+          resultsLength: event.results.length,
+          results: event.results
+        });
         
         let finalTranscript = '';
         let interimTranscript = '';
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
+          const result = event.results[i];
+          const transcript = result[0].transcript;
+          const confidence = result[0].confidence;
+          
+          console.log(`📝 Result ${i}:`, {
+            transcript,
+            confidence,
+            isFinal: result.isFinal
+          });
+          
+          if (result.isFinal) {
             finalTranscript += transcript;
             console.log('✅ Final transcript:', finalTranscript);
           } else {
@@ -45,22 +60,55 @@ export class SimpleDictationService {
         }
         
         if (interimTranscript) {
+          console.log('📤 Calling onInterimResult with:', interimTranscript);
           this.onInterimResult?.(interimTranscript);
         }
         
         if (finalTranscript) {
+          console.log('📤 Calling onFinalResult with:', finalTranscript);
           this.onFinalResult?.(finalTranscript);
         }
       };
       
       this.recognition.onerror = (event: any) => {
         console.error('❌ Speech recognition error:', event.error);
+        console.error('❌ Error details:', event);
         this.onError?.(event.error);
       };
       
       this.recognition.onend = () => {
         console.log('🛑 Speech recognition ended');
         this.isListening = false;
+        this.onEnd?.();
+      };
+
+      // Add more event listeners for debugging
+      this.recognition.onaudiostart = () => {
+        console.log('🎵 Audio input started');
+      };
+      
+      this.recognition.onaudioend = () => {
+        console.log('🎵 Audio input ended');
+      };
+      
+      this.recognition.onsoundstart = () => {
+        console.log('🔊 Sound detected');
+      };
+      
+      this.recognition.onsoundend = () => {
+        console.log('🔊 Sound ended');
+      };
+      
+      this.recognition.onspeechstart = () => {
+        console.log('🗣️ Speech detected');
+      };
+      
+      this.recognition.onspeechend = () => {
+        console.log('🗣️ Speech ended');
+      };
+      
+      this.recognition.onnomatch = () => {
+        console.log('❓ No speech match found');
       };
     } else {
       console.error('❌ Speech Recognition not supported');
@@ -108,6 +156,22 @@ export class SimpleDictationService {
       this.isListening = true;
       
       console.log('✅ Speech recognition started successfully');
+      
+      // Add a test timeout to simulate speech recognition (for debugging)
+      setTimeout(() => {
+        console.log('🧪 TEST: Simulating speech recognition result...');
+        if (this.onInterimResult) {
+          this.onInterimResult('Hello...');
+        }
+      }, 2000);
+      
+      setTimeout(() => {
+        console.log('🧪 TEST: Simulating final result...');
+        if (this.onFinalResult) {
+          this.onFinalResult('Hello world');
+        }
+      }, 4000);
+      
       return true;
       
     } catch (error) {
