@@ -51,7 +51,11 @@ export default function Home() {
   useEffect(() => {
     dictationService.onInterimResult = (text: string) => {
       console.log('📝 Interim result:', text);
-      setDictationTranscript(text);
+      if (text && text.trim()) {
+        setDictationTranscript(text);
+      } else {
+        setDictationTranscript('Processing...');
+      }
     };
     
     dictationService.onFinalResult = (text: string) => {
@@ -77,7 +81,7 @@ export default function Home() {
     
     dictationService.onEnd = () => {
       console.log('🎤 Dictation service ended');
-      if (!dictationTranscript || dictationTranscript === 'Listening...') {
+      if (!dictationTranscript || dictationTranscript === 'Listening...' || dictationTranscript === 'Processing...') {
         setDictationTranscript('');
       }
     };

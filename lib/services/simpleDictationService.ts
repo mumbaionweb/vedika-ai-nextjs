@@ -17,9 +17,17 @@ export class SimpleDictationService {
     
     if (SpeechRecognition) {
       this.recognition = new SpeechRecognition();
-      this.recognition.continuous = false;
+      this.recognition.continuous = true; // Keep listening until manually stopped
       this.recognition.interimResults = true;
       this.recognition.lang = 'en-US';
+      this.recognition.maxAlternatives = 1;
+      
+      console.log('🎤 Speech Recognition settings:', {
+        continuous: this.recognition.continuous,
+        interimResults: this.recognition.interimResults,
+        lang: this.recognition.lang,
+        maxAlternatives: this.recognition.maxAlternatives
+      });
       
       console.log('✅ Speech Recognition initialized');
       
@@ -59,12 +67,15 @@ export class SimpleDictationService {
           }
         }
         
-        if (interimTranscript) {
+        if (interimTranscript && interimTranscript.trim()) {
           console.log('📤 Calling onInterimResult with:', interimTranscript);
           this.onInterimResult?.(interimTranscript);
+        } else if (interimTranscript) {
+          console.log('📤 Calling onInterimResult with empty text, showing Processing...');
+          this.onInterimResult?.('');
         }
         
-        if (finalTranscript) {
+        if (finalTranscript && finalTranscript.trim()) {
           console.log('📤 Calling onFinalResult with:', finalTranscript);
           this.onFinalResult?.(finalTranscript);
         }
@@ -80,6 +91,16 @@ export class SimpleDictationService {
         console.log('🛑 Speech recognition ended');
         this.isListening = false;
         this.onEnd?.();
+        
+        // Restart recognition if it ended unexpectedly (for continuous mode)
+        if (this.recognition && !this.recognition.continuous) {
+          console.log('🔄 Restarting recognition...');
+          setTimeout(() => {
+            if (this.isListening) {
+              this.recognition.start();
+            }
+          }, 100);
+        }
       };
 
       // Add more event listeners for debugging
