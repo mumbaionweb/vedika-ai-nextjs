@@ -17,8 +17,8 @@ interface UseCoinsReturn {
 }
 
 export function useCoins(): UseCoinsReturn {
-  const [vedikaCoinsRemaining, setVedikaCoinsRemaining] = useState<number>(0);
-  const [dailyVedikaCoins, setDailyVedikaCoins] = useState<number>(20);
+  const [creditsRemaining, setCreditsRemaining] = useState<number>(0);
+  const [dailyCredits, setDailyCredits] = useState<number>(20);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,27 +31,25 @@ export function useCoins(): UseCoinsReturn {
       const session = await DeviceSessionApi.validateSession();
       
       if (session) {
-        const remainingCoins = session.vedika_coins?.remaining || session.vedika_coins_remaining || 0;
         console.log('🪙 [useCoins] Session data:', {
-          vedikaCoinsRemaining: remainingCoins,
-          dailyVedikaCoins: session.daily_vedika_coins
+          creditsRemaining: session.credits_remaining,
+          dailyCredits: session.daily_credits
         });
-        setVedikaCoinsRemaining(remainingCoins);
-        setDailyVedikaCoins(session.daily_vedika_coins);
+        setCreditsRemaining(session.credits_remaining);
+        setDailyCredits(session.daily_credits);
       } else {
         console.warn('⚠️ [useCoins] No valid session, creating new one...');
         const newSession = await DeviceSessionApi.createSession();
-        const newRemainingCoins = newSession.vedika_coins?.remaining || newSession.vedika_coins_remaining || 0;
-        setVedikaCoinsRemaining(newRemainingCoins);
-        setDailyVedikaCoins(newSession.daily_vedika_coins);
+        setCreditsRemaining(newSession.credits_remaining);
+        setDailyCredits(newSession.daily_credits);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
       console.error('❌ [useCoins] Error fetching credits:', err);
       // Fallback to defaults on error
-      setVedikaCoinsRemaining(20);
-      setDailyVedikaCoins(20);
+      setCreditsRemaining(20);
+      setDailyCredits(20);
     } finally {
       setLoading(false);
     }
@@ -62,12 +60,12 @@ export function useCoins(): UseCoinsReturn {
   }, [fetchBalance]);
 
   // Computed values for easy display
-  const usedCredits = dailyVedikaCoins - vedikaCoinsRemaining;
+  const usedCredits = dailyCredits - creditsRemaining;
 
   console.log('🪙 [useCoins] Computed values:', {
     usedCredits,
-    totalCredits: dailyVedikaCoins,
-    remainingCredits: vedikaCoinsRemaining,
+    totalCredits: dailyCredits,
+    remainingCredits: creditsRemaining,
     loading,
     error
   });
@@ -77,7 +75,7 @@ export function useCoins(): UseCoinsReturn {
     error,
     refetch: fetchBalance,
     usedCredits,
-    totalCredits: dailyVedikaCoins,
-    remainingCredits: vedikaCoinsRemaining,
+    totalCredits: dailyCredits,
+    remainingCredits: creditsRemaining,
   };
 }

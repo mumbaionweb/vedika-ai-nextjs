@@ -124,12 +124,9 @@ export interface CoinsBalance {
   total_earned: number;
   total_spent: number;
   plan: string;
-  daily_vedika_coins: number;
-  vedika_coins_used: number;
-  vedika_coins?: {
-    remaining: number;
-  };
-  vedika_coins_remaining?: number; // Fallback for old API structure
+  daily_credits: number;
+  credits_used: number;
+  credits_remaining: number;
   expires_at?: string;
 }
 
