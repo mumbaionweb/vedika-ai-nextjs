@@ -6,8 +6,14 @@
 export class SimpleDictationService {
   private recognition: any = null;
   private isListening = false;
+  private isInitialized = false;
 
   constructor() {
+    if (this.isInitialized) {
+      console.warn('⚠️ Service already initialized, skipping...');
+      return;
+    }
+
     console.log('🔧 Constructing SimpleDictationService...');
     
     // Only initialize on client side
@@ -26,7 +32,7 @@ export class SimpleDictationService {
     try {
       this.recognition = new SpeechRecognition();
       
-      // Settings MUST be set BEFORE any event handlers
+      // Settings
       this.recognition.continuous = false;
       this.recognition.interimResults = true;
       this.recognition.lang = 'en-US';
@@ -35,193 +41,137 @@ export class SimpleDictationService {
       console.log('🎤 Speech Recognition settings:', {
         continuous: this.recognition.continuous,
         interimResults: this.recognition.interimResults,
-        lang: this.recognition.lang,
-        maxAlternatives: this.recognition.maxAlternatives
+        lang: this.recognition.lang
       });
       
-      // Attach ALL event handlers immediately
       this.attachEventHandlers();
+      this.isInitialized = true;
       
       console.log('✅ Speech Recognition initialized');
     } catch (error) {
-      console.error('❌ Error initializing Speech Recognition:', error);
+      console.error('❌ Error initializing:', error);
     }
   }
 
   private attachEventHandlers() {
-    if (!this.recognition) {
-      console.error('❌ No recognition object to attach handlers to');
-      return;
-    }
+    if (!this.recognition) return;
 
     console.log('🔧 Attaching event handlers...');
 
-    // CRITICAL: onstart
     this.recognition.onstart = () => {
-      console.log('🎤 [EVENT] Speech recognition started');
+      console.log('🎤 [onstart] Recognition started');
+      this.isListening = true;
     };
 
-    // CRITICAL: onaudiostart
     this.recognition.onaudiostart = () => {
-      console.log('🎵 [EVENT] Audio input started');
+      console.log('🎵 [onaudiostart] Audio input started');
     };
 
-    // CRITICAL: onsoundstart
     this.recognition.onsoundstart = () => {
-      console.log('🔊 [EVENT] Sound detected');
+      console.log('🔊 [onsoundstart] Sound detected');
     };
 
-    // CRITICAL: onspeechstart
     this.recognition.onspeechstart = () => {
-      console.log('🗣️ [EVENT] Speech detected');
+      console.log('🗣️ [onspeechstart] Speech detected');
     };
 
-    // ✅✅✅ MOST CRITICAL: onresult
+    // ✅ CRITICAL: onresult handler
     this.recognition.onresult = (event: any) => {
       console.log('═══════════════════════════════════════');
-      console.log('📝📝📝 [EVENT] ON RESULT FIRED!!!');
-      console.log('📊 Event object:', event);
+      console.log('📝 [onresult] FIRED!!!');
       console.log('📊 Results:', event.results);
-      console.log('📊 Results length:', event.results?.length);
       
-      if (!event.results) {
-        console.error('❌ No results in event!');
-        return;
-      }
-
       try {
         let finalTranscript = '';
         let interimTranscript = '';
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
-          if (!result || !result[0]) {
-            console.warn('⚠️ Empty result at index', i);
-            continue;
-          }
-          
           const transcript = result[0].transcript;
-          const confidence = result[0].confidence || 0;
           const isFinal = result.isFinal;
           
-          console.log(`📌 Result[${i}]:`, {
-            transcript,
-            confidence,
-            isFinal
-          });
+          console.log(`Result[${i}]: "${transcript}" (final: ${isFinal})`);
           
           if (isFinal) {
             finalTranscript += transcript;
-            console.log('✅ FINAL TRANSCRIPT:', finalTranscript);
           } else {
             interimTranscript += transcript;
-            console.log('⏳ INTERIM TRANSCRIPT:', interimTranscript);
           }
         }
         
-        console.log('Final:', finalTranscript, 'Interim:', interimTranscript);
-        
-        // Call callbacks with safety checks
         if (interimTranscript) {
-          console.log('📤 Calling onInterimResult with:', interimTranscript);
-          if (typeof this.onInterimResult === 'function') {
-            this.onInterimResult(interimTranscript);
-          } else {
-            console.warn('⚠️ onInterimResult is not a function');
-          }
+          console.log('⏳ INTERIM:', interimTranscript);
+          this.onInterimResult?.(interimTranscript);
         }
         
         if (finalTranscript) {
-          console.log('📤 Calling onFinalResult with:', finalTranscript);
-          if (typeof this.onFinalResult === 'function') {
-            this.onFinalResult(finalTranscript);
-          } else {
-            console.warn('⚠️ onFinalResult is not a function');
-          }
+          console.log('✅ FINAL:', finalTranscript);
+          this.onFinalResult?.(finalTranscript);
         }
         
         console.log('═══════════════════════════════════════');
       } catch (error) {
-        console.error('❌ Error in onresult handler:', error);
+        console.error('❌ Error processing result:', error);
       }
     };
 
-    // CRITICAL: onspeechend
     this.recognition.onspeechend = () => {
-      console.log('🗣️ [EVENT] Speech ended');
-      console.log('💡 Waiting for results...');
+      console.log('🗣️ [onspeechend] Speech ended, waiting for results...');
     };
 
-    // CRITICAL: onsoundend
     this.recognition.onsoundend = () => {
-      console.log('🔊 [EVENT] Sound ended');
+      console.log('🔊 [onsoundend] Sound ended');
     };
 
-    // CRITICAL: onaudioend
     this.recognition.onaudioend = () => {
-      console.log('🎵 [EVENT] Audio input ended');
-      console.log('💡 Audio processing complete, results should fire now...');
+      console.log('🎵 [onaudioend] Audio ended, results should fire now...');
     };
 
-    // CRITICAL: onnomatch
     this.recognition.onnomatch = (event: any) => {
-      console.warn('⚠️ [EVENT] No match found');
-      console.warn('📊 Event:', event);
-      console.warn('💡 Speech was detected but not recognized');
+      console.warn('═══════════════════════════════════════');
+      console.warn('⚠️ [onnomatch] NO MATCH - Speech not recognized!');
+      console.warn('💡 Try:');
+      console.warn('   - Speaking louder');
+      console.warn('   - Speaking more clearly');
+      console.warn('   - Using common phrases like "Hello world"');
+      console.warn('═══════════════════════════════════════');
     };
 
-    // CRITICAL: onerror
     this.recognition.onerror = (event: any) => {
-      try {
-        console.error('═══════════════════════════════════════');
-        console.error('❌ [EVENT] Recognition error:', event?.error || 'Unknown error');
-        console.error('📊 Error event:', event);
-        console.error('📊 Error type:', typeof event);
-        console.error('📊 Error keys:', event ? Object.keys(event) : 'No event object');
-        console.error('═══════════════════════════════════════');
-        
-        if (typeof this.onError === 'function') {
-          this.onError(event?.error || 'Unknown speech recognition error');
-        }
-      } catch (errorHandlerError) {
-        console.error('❌ Error in error handler:', errorHandlerError);
+      console.error('═══════════════════════════════════════');
+      console.error('❌ [onerror] Error:', event.error);
+      
+      // Handle "already started" error gracefully
+      if (event.error === 'aborted' || event.error.includes('already started')) {
+        console.log('💡 Recognition aborted or already running - this is normal');
       }
+      
+      console.error('═══════════════════════════════════════');
+      this.onError?.(event.error);
     };
 
-    // CRITICAL: onend
     this.recognition.onend = () => {
       console.log('═══════════════════════════════════════');
-      console.log('🛑 [EVENT] Recognition ended');
+      console.log('🛑 [onend] Recognition ended');
       console.log('═══════════════════════════════════════');
       this.isListening = false;
     };
 
-    // Verify handlers are attached
-    console.log('✅ Event handlers attached. Verification:', {
-      hasOnResult: typeof this.recognition.onresult === 'function',
-      hasOnError: typeof this.recognition.onerror === 'function',
-      hasOnEnd: typeof this.recognition.onend === 'function'
-    });
+    console.log('✅ All event handlers attached');
   }
 
   async startListening(): Promise<boolean> {
-    if (typeof window === 'undefined') {
-      console.error('❌ Speech Recognition not available on server side');
-      return false;
-    }
-    
     if (!this.recognition) {
-      console.error('❌ Speech Recognition not available');
+      console.error('❌ No recognition object');
       return false;
     }
     
-    // Always stop any existing recognition first
+    // ✅ CRITICAL: Check if already listening
     if (this.isListening) {
       console.warn('⚠️ Already listening, stopping first...');
-      this.recognition.stop();
+      this.recognition.abort(); // Use abort instead of stop
+      await new Promise(resolve => setTimeout(resolve, 100)); // Wait for abort
       this.isListening = false;
-      // Wait a bit for it to fully stop
-      await new Promise(resolve => setTimeout(resolve, 200));
     }
     
     try {
@@ -229,74 +179,47 @@ export class SimpleDictationService {
       console.log('🎤 STARTING DICTATION');
       console.log('═══════════════════════════════════════');
       
-      console.log('🎤 Requesting microphone access...');
-      
+      // Request microphone
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           noiseSuppression: true,
           echoCancellation: true,
-          autoGainControl: true,
-          sampleRate: 44100,
-          channelCount: 1
+          autoGainControl: true
         }
       });
       
-      console.log('✅ Microphone access granted');
+      console.log('✅ Microphone granted');
       
-      const track = stream.getAudioTracks()[0];
-      const settings = track.getSettings();
-      console.log('🎤 Audio settings:', settings);
-      
-      // Final verification before start
-      console.log('🔍 Pre-start verification:', {
-        hasRecognition: !!this.recognition,
-        continuous: this.recognition.continuous,
-        interimResults: this.recognition.interimResults,
-        hasOnResult: typeof this.recognition.onresult === 'function'
-      });
-      
-      console.log('🎤 About to call recognition.start()...');
+      // Start recognition with try-catch
       try {
         this.recognition.start();
-        this.isListening = true;
-      } catch (startError) {
-        console.error('❌ Error starting recognition:', startError);
-        if (startError instanceof Error && startError.message.includes('already started')) {
-          console.log('🔄 Recognition was already started, trying to stop and restart...');
-          this.recognition.stop();
-          await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('✅ Recognition started');
+        console.log('👂 Speak clearly: "Hello world"');
+        console.log('═══════════════════════════════════════');
+        return true;
+      } catch (error: any) {
+        if (error.message.includes('already started')) {
+          console.log('🔄 Recognition already active, aborting and restarting...');
+          this.recognition.abort();
+          await new Promise(resolve => setTimeout(resolve, 200));
           this.recognition.start();
-          this.isListening = true;
-        } else {
-          throw startError;
+          console.log('✅ Recognition restarted');
+          return true;
         }
+        throw error;
       }
-      
-      console.log('✅ Recognition.start() called successfully');
-      console.log('👂 Listening... Speak now!');
-      console.log('💡 Say something like: "Hello world"');
-      console.log('═══════════════════════════════════════');
-      
-      return true;
       
     } catch (error) {
-      console.error('═══════════════════════════════════════');
       console.error('❌ Failed to start:', error);
-      console.error('📊 Error type:', typeof error);
-      console.error('📊 Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('📊 Error stack:', error instanceof Error ? error.stack : 'No stack');
-      console.error('═══════════════════════════════════════');
-      if (typeof this.onError === 'function') {
-        this.onError(error instanceof Error ? error.message : 'Failed to start');
-      }
+      this.onError?.(error instanceof Error ? error.message : 'Failed');
       return false;
     }
   }
 
   stopListening(): void {
     if (this.recognition && this.isListening) {
-      console.log('🛑 Manually stopping recognition...');
-      this.recognition.stop();
+      console.log('🛑 Stopping recognition...');
+      this.recognition.abort(); // Use abort for immediate stop
       this.isListening = false;
     }
   }
@@ -312,7 +235,7 @@ export class SimpleDictationService {
     return !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition;
   }
 
-  // Public callbacks - set these from your component
+  // Callbacks
   onInterimResult?: (text: string) => void;
   onFinalResult?: (text: string) => void;
   onError?: (error: string) => void;

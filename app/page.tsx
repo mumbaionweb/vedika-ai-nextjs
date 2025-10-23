@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
@@ -32,7 +32,9 @@ export default function Home() {
   const [dictationTranscript, setDictationTranscript] = useState('');
   const [interactionService] = useState(() => new InteractionService());
   const [voiceService] = useState(() => new VoiceService());
-  const [dictationService] = useState(() => new SimpleDictationService());
+  
+  // ✅ Use useRef to create service only once
+  const dictationServiceRef = useRef<SimpleDictationService | null>(null);
 
   // Remove useChat hook since we're not using it anymore
 
@@ -47,54 +49,58 @@ export default function Home() {
     console.log('🔄 State changed - inputValue:', inputValue, 'dictationTranscript:', dictationTranscript);
   }, [inputValue, dictationTranscript]);
 
-  // Set up dictation service callbacks
+  // Initialize dictation service once
   useEffect(() => {
-    dictationService.onInterimResult = (text: string) => {
-      console.log('📝 Interim result:', text);
-      if (text && text.trim()) {
-        setDictationTranscript(text);
-      } else {
-        setDictationTranscript('Processing...');
-      }
-    };
-    
-    dictationService.onFinalResult = (text: string) => {
-      console.log('✅ Final result:', text);
-      setInputValue(text);
-      setDictationTranscript('');
-      setIsDictating(false);
+    if (!dictationServiceRef.current) {
+      dictationServiceRef.current = new SimpleDictationService();
       
-      // The user can manually submit the message or it will be submitted automatically
-      console.log('✅ Dictation completed. User can now submit the message.');
-    };
-    
-    dictationService.onError = (error: string) => {
-      console.error('❌ Dictation error:', error);
-      setIsDictating(false);
-      setDictationTranscript('');
-    };
-    
-    dictationService.onStart = () => {
-      console.log('🎤 Dictation service started');
-      setDictationTranscript('Waiting for you to speak...');
-    };
-    
-    // Add a callback for when speech recognition actually starts
-    dictationService.onSpeechStart = () => {
-      console.log('🎤 Speech recognition actually started');
-      setDictationTranscript('Listening...');
-    };
-    
-    dictationService.onEnd = () => {
-      console.log('🎤 Dictation service ended');
-      if (!dictationTranscript || 
-          dictationTranscript === 'Listening...' || 
-          dictationTranscript === 'Processing...' ||
-          dictationTranscript === 'Waiting for you to speak...') {
+      // Set callbacks
+      dictationServiceRef.current.onInterimResult = (text: string) => {
+        console.log('📝 Interim result:', text);
+        if (text && text.trim()) {
+          setDictationTranscript(text);
+        } else {
+          setDictationTranscript('Processing...');
+        }
+      };
+      
+      dictationServiceRef.current.onFinalResult = (text: string) => {
+        console.log('✅ Final result:', text);
+        setInputValue(text);
         setDictationTranscript('');
-      }
-    };
-  }, [dictationService]);
+        setIsDictating(false);
+        
+        // The user can manually submit the message or it will be submitted automatically
+        console.log('✅ Dictation completed. User can now submit the message.');
+      };
+      
+      dictationServiceRef.current.onError = (error: string) => {
+        console.error('❌ Dictation error:', error);
+        setIsDictating(false);
+        setDictationTranscript('');
+      };
+      
+      dictationServiceRef.current.onStart = () => {
+        console.log('🎤 Dictation service started');
+        setDictationTranscript('Waiting for you to speak...');
+      };
+      
+      dictationServiceRef.current.onSpeechStart = () => {
+        console.log('🎤 Speech recognition actually started');
+        setDictationTranscript('Listening...');
+      };
+      
+      dictationServiceRef.current.onEnd = () => {
+        console.log('🎤 Dictation service ended');
+        if (!dictationTranscript || 
+            dictationTranscript === 'Listening...' || 
+            dictationTranscript === 'Processing...' ||
+            dictationTranscript === 'Waiting for you to speak...') {
+          setDictationTranscript('');
+        }
+      };
+    }
+  }, []); // Empty dependency array - run only once
 
   async function initializeSession() {
     try {
@@ -151,20 +157,27 @@ export default function Home() {
     setInputValue('');
     
     console.log('Starting dictation...');
-    const success = await dictationService.startListening();
-    console.log('Dictation start result:', success);
-    
-    if (success) {
-      console.log('🎤 Dictation started');
+    if (dictationServiceRef.current) {
+      const success = await dictationServiceRef.current.startListening();
+      console.log('Dictation start result:', success);
+      
+      if (success) {
+        console.log('🎤 Dictation started');
+      } else {
+        console.error('🎤 Failed to start dictation');
+        setIsDictating(false);
+      }
     } else {
-      console.error('🎤 Failed to start dictation');
+      console.error('❌ Dictation service not initialized');
       setIsDictating(false);
     }
   };
 
   const handleDictationStop = () => {
     console.log('🛑 Stopping dictation...');
-    dictationService.stopListening();
+    if (dictationServiceRef.current) {
+      dictationServiceRef.current.stopListening();
+    }
     setIsDictating(false);
     setDictationTranscript('');
   };
