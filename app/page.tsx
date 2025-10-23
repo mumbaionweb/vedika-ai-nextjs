@@ -69,6 +69,18 @@ export default function Home() {
       setIsDictating(false);
       setDictationTranscript('');
     };
+    
+    dictationService.onStart = () => {
+      console.log('🎤 Dictation service started');
+      setDictationTranscript('Listening...');
+    };
+    
+    dictationService.onEnd = () => {
+      console.log('🎤 Dictation service ended');
+      if (!dictationTranscript || dictationTranscript === 'Listening...') {
+        setDictationTranscript('');
+      }
+    };
   }, [dictationService]);
 
   async function initializeSession() {
@@ -356,9 +368,21 @@ export default function Home() {
                     ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
                     : "Ask me anything about your business or get help with your tasks."
                 }
-                className="w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left"
+                className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left ${
+                  isDictating && dictationTranscript ? 'text-blue-600' : ''
+                }`}
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
+              {/* Processing animation for dictation */}
+              {isDictating && dictationTranscript && (
+                <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bottom Bar with Agents and Interaction Modes/Submit */}

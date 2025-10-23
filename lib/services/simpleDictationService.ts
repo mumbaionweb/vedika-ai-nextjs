@@ -157,21 +157,6 @@ export class SimpleDictationService {
       
       console.log('✅ Speech recognition started successfully');
       
-      // Add a test timeout to simulate speech recognition (for debugging)
-      setTimeout(() => {
-        console.log('🧪 TEST: Simulating speech recognition result...');
-        if (this.onInterimResult) {
-          this.onInterimResult('Hello...');
-        }
-      }, 2000);
-      
-      setTimeout(() => {
-        console.log('🧪 TEST: Simulating final result...');
-        if (this.onFinalResult) {
-          this.onFinalResult('Hello world');
-        }
-      }, 4000);
-      
       return true;
       
     } catch (error) {
