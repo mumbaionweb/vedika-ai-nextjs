@@ -74,9 +74,10 @@ export class VoiceService {
   async startVoiceConversation(callbacks: {
     onError?: (error: string) => void;
     onTranscriptionUpdate?: (transcript: string, isFinal: boolean) => void;
-  }): Promise<void> {
+  }): Promise<boolean> {
     this.isRecording = true;
     console.log('🎤 Voice conversation started');
+    return true;
   }
 
   stopVoiceConversation(): void {
