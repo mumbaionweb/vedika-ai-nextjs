@@ -7,7 +7,6 @@ import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
-import { unifiedDictationService } from '@/lib/services/unifiedDictationService';
 import { InteractionService } from '@/lib/services/interactionService';
 import { checkBrowserSupport } from '@/lib/utils/browserSupport';
 import { VoiceService } from '@/lib/services/voiceService';
