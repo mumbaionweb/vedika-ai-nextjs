@@ -68,13 +68,13 @@ export class DeviceSessionApi {
     } catch (error) {
       console.error('❌ Device session creation error:', error);
       console.error('❌ Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       });
       
       // Check if it's a network error
-      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      if (error instanceof Error && error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
         console.error('❌ Network error - API endpoint not accessible');
         console.error('❌ Check if API endpoint is correct:', config.api.baseUrl);
         console.error('❌ This might be a CORS issue or the API server is down');
@@ -140,7 +140,7 @@ export class DeviceSessionApi {
       });
       
       // Check if it's a network error
-      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      if (error instanceof Error && error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
         console.error('❌ Network error - API endpoint not accessible');
         console.error('❌ Check if API endpoint is correct:', config.api.baseUrl);
         console.error('❌ This might be a CORS issue or the API server is down');
