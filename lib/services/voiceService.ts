@@ -3,7 +3,7 @@
  * Uses AWS Polly for text-to-speech conversion
  */
 
-import { PollyClient, SynthesizeSpeechCommand } from "@aws-sdk/client-polly";
+import { PollyClient, SynthesizeSpeechCommand, DescribeVoicesCommand } from "@aws-sdk/client-polly";
 
 export class VoiceService {
   private pollyClient: PollyClient;
@@ -58,9 +58,8 @@ export class VoiceService {
 
   async getAvailableVoices(): Promise<any[]> {
     try {
-      const response = await this.pollyClient.send({
-        command: 'DescribeVoices'
-      });
+      const command = new DescribeVoicesCommand({});
+      const response = await this.pollyClient.send(command);
       
       return response.Voices || [];
       
