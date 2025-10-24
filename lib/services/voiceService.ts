@@ -33,7 +33,7 @@ export class VoiceService {
       
       if (response.AudioStream) {
         const audioData = await response.AudioStream.transformToByteArray();
-        const audioBuffer = await this.audioContext!.decodeAudioData(audioData.buffer);
+        const audioBuffer = await this.audioContext!.decodeAudioData(audioData.buffer as ArrayBuffer);
         return audioBuffer;
       }
       
