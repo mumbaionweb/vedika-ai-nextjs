@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import MainLayout from "@/components/layout/MainLayout";
 import { CoinsProvider } from "@/contexts/CoinsContext";
+import { DeepgramContextProvider } from "@/contexts/DeepgramContext";
+import { MicrophoneContextProvider } from "@/contexts/MicrophoneContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,7 +27,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <CoinsProvider>
-          <MainLayout>{children}</MainLayout>
+          <DeepgramContextProvider>
+            <MicrophoneContextProvider>
+              <MainLayout>{children}</MainLayout>
+            </MicrophoneContextProvider>
+          </DeepgramContextProvider>
         </CoinsProvider>
       </body>
     </html>

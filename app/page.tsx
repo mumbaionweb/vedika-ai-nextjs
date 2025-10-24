@@ -10,7 +10,7 @@ import { config } from '@/lib/config';
 import { InteractionService } from '@/lib/services/interactionService';
 import { checkBrowserSupport } from '@/lib/utils/browserSupport';
 import { VoiceService } from '@/lib/services/voiceService';
-import { useSpeechRecognition } from '@/lib/hooks/useSpeechRecognition';
+import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
 
@@ -32,14 +32,14 @@ export default function Home() {
   const [interactionService] = useState(() => new InteractionService());
   const [voiceService] = useState(() => new VoiceService());
   
-  // ✅ Use Web Speech API hook
+  // ✅ Use Deepgram dictation hook
   const {
     transcript: speechTranscript,
     isListening,
     startListening,
     stopListening,
-    hasRecognitionSupport,
-  } = useSpeechRecognition();
+    isSupported: hasRecognitionSupport,
+  } = useDeepgramDictation();
 
   // Remove useChat hook since we're not using it anymore
 
