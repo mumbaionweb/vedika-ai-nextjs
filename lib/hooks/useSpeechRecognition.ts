@@ -72,7 +72,7 @@ interface UseSpeechRecognitionHook {
 // Check if the browser supports SpeechRecognition
 const hasSupport = () =>
   typeof window !== "undefined" &&
-  ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+  ("SpeechRecognition" in (window as any) || "webkitSpeechRecognition" in (window as any));
 
 /**
  * A custom React hook to manage speech recognition.
@@ -83,7 +83,7 @@ const hasSupport = () =>
 export const useSpeechRecognition = (): UseSpeechRecognitionHook => {
   const [transcript, setTranscript] = useState<string>("");
   const [isListening, setIsListening] = useState<boolean>(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (!hasSupport()) {
@@ -91,7 +91,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionHook => {
       return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
     const recognition = recognitionRef.current;
 
@@ -99,7 +99,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionHook => {
     recognition.interimResults = true;
     recognition.lang = "en-US"; // Set desired language
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: any) => {
       console.log('🎤 Speech recognition result received:', event.results.length, 'results');
       let finalTranscript = "";
       let interimTranscript = "";
@@ -123,7 +123,7 @@ export const useSpeechRecognition = (): UseSpeechRecognitionHook => {
       setTranscript(combinedTranscript);
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
       
       // Handle different error types
