@@ -1,49 +1,36 @@
 /**
- * Unified Interaction Service
- * Manages all interaction modes (Type, Dictation, Voice) with AWS integration
+ * Interaction Service
+ * Manages interaction modes with Voice integration
  */
 
-import { EnhancedDictationService } from './enhancedDictationService';
-import { StreamingDictationService } from './streamingDictationService';
 import { VoiceService } from './voiceService';
 import { DeviceManager } from '../utils/deviceManager';
 
 export class InteractionService {
-  private dictationService: EnhancedDictationService;
-  private streamingService: StreamingDictationService;
   private voiceService: VoiceService;
   private currentMode: 'type' | 'dictation' | 'voice' = 'type';
 
   constructor() {
-    this.dictationService = new EnhancedDictationService();
-    this.streamingService = new StreamingDictationService();
     this.voiceService = new VoiceService();
-    
-    this.setupCallbacks();
-  }
-
-  private setupCallbacks(): void {
-    this.dictationService.onFinalResult = (text) => {
-      this.handleFinalResult(text);
-    };
-    
-    this.streamingService.onInterimResult = (text) => {
-      this.handleInterimResult(text);
-    };
-    
-    this.streamingService.onFinalResult = (text) => {
-      this.handleFinalResult(text);
-    };
   }
 
   async startInteraction(mode: 'type' | 'dictation' | 'voice'): Promise<boolean> {
     this.currentMode = mode;
     
     switch (mode) {
-      case 'dictation':
-        return await this.dictationService.startListening();
       case 'voice':
-        return await this.streamingService.startStreaming();
+        return await this.voiceService.startVoiceConversation({
+          onError: (error) => {
+            console.error('Voice interaction error:', error);
+          },
+          onTranscriptionUpdate: (transcript, isFinal) => {
+            if (isFinal) {
+              this.onFinalResult?.({ response: transcript });
+            } else {
+              this.onInterimResult?.(transcript);
+            }
+          }
+        });
       default:
         return true;
     }
@@ -51,18 +38,10 @@ export class InteractionService {
 
   stopInteraction(): void {
     switch (this.currentMode) {
-      case 'dictation':
-        this.dictationService.stopListening();
-        break;
       case 'voice':
-        this.streamingService.stopStreaming();
+        this.voiceService.stopVoiceConversation();
         break;
     }
-  }
-
-  private handleInterimResult(text: string): void {
-    // Update UI with interim results
-    this.onInterimResult?.(text);
   }
 
   private async handleFinalResult(text: string): Promise<void> {
