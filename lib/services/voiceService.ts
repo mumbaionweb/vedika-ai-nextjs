@@ -25,7 +25,7 @@ export class VoiceService {
       const command = new SynthesizeSpeechCommand({
         Text: text,
         OutputFormat: 'mp3',
-        VoiceId: voiceId,
+        VoiceId: voiceId as any,
         Engine: 'neural'
       });
 
