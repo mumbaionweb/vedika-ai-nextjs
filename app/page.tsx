@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
-import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
+import { sessionManager } from '@/lib/utils/sessionManager';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { coinsStore } from '@/lib/stores/coinsStore';
 import { config } from '@/lib/config';
@@ -45,7 +45,6 @@ export default function Home() {
   // Initialize device session on mount
   useEffect(() => {
     initializeSession();
-    checkBrowserSupport();
   }, []);
 
   // Debug state changes
@@ -66,11 +65,11 @@ export default function Home() {
     try {
       console.log('🚀 Initializing vedika-ai session...');
       
-      // Log browser capabilities
+      // Log browser capabilities once
       checkBrowserSupport();
       
-      // Use the ensureSession method which handles validation and creation
-      const sessionResult = await DeviceSessionApi.ensureSession();
+      // Use sessionManager to prevent duplicate API calls
+      const sessionResult = await sessionManager.getSession();
       
       console.log('✅ Session ready:', {
         sessionId: sessionResult.session_id,
@@ -254,7 +253,7 @@ export default function Home() {
                 body: JSON.stringify({
                   message: inputValue,
                   device_id: DeviceManager.getDeviceId(),
-                  session_id: DeviceManager.getSessionId(),
+                  session_id: sessionManager.getCachedSession()?.session_id || DeviceManager.getSessionId(),
                   request_type: 'anonymous',
                   model_id: 'best',
                   query_type: selectedAgent === 'search' ? 'general' : selectedAgent === 'research' ? 'analytical' : 'technical',

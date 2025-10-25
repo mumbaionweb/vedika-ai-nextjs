@@ -3,7 +3,7 @@
 import { useEffect, useRef, use, useState } from 'react';
 import { apiService } from '@/lib/services/api';
 import { DeviceManager } from '@/lib/utils/deviceManager';
-import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
+import { sessionManager } from '@/lib/utils/sessionManager';
 import { coinsStore } from '@/lib/stores/coinsStore';
 import { config } from '@/lib/config';
 import { VoiceService } from '@/lib/services/voiceService';
@@ -76,7 +76,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         }
         
         console.log('🚀 [CHAT PAGE] Initializing vedika-ai session...');
-        const session = await DeviceSessionApi.ensureSession();
+        const session = await sessionManager.getSession();
         console.log('✅ [CHAT PAGE] Session ready:', {
           sessionId: session.session_id,
           credits: session.credits_remaining

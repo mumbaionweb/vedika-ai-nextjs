@@ -3,7 +3,7 @@
  * Single source of truth for coins/credits data with caching
  */
 
-import { DeviceSessionApi } from '../services/deviceSessionApi';
+import { sessionManager } from '../utils/sessionManager';
 
 interface CoinsData {
   usedCredits: number;
@@ -89,30 +89,27 @@ class CoinsStore {
     try {
       console.log('🪙 [CoinsStore] Fetching fresh coins data...');
       
-      const session = await DeviceSessionApi.validateSession();
+      // Use sessionManager to avoid duplicate API calls
+      const session = await sessionManager.getSession();
       
-      if (session) {
-        const remainingCredits = session.credits_remaining;
-        const totalCredits = session.daily_credits;
-        const usedCredits = Math.max(0, totalCredits - remainingCredits);
+      const remainingCredits = session.credits_remaining;
+      const totalCredits = session.daily_credits;
+      const usedCredits = Math.max(0, totalCredits - remainingCredits);
 
-        this.data = {
-          usedCredits,
-          totalCredits,
-          remainingCredits,
-          lastUpdated: Date.now(),
-          loading: false,
-          error: null,
-        };
+      this.data = {
+        usedCredits,
+        totalCredits,
+        remainingCredits,
+        lastUpdated: Date.now(),
+        loading: false,
+        error: null,
+      };
 
-        console.log('🪙 [CoinsStore] Updated coins data:', {
-          used: usedCredits,
-          total: totalCredits,
-          remaining: remainingCredits,
-        });
-      } else {
-        throw new Error('No valid session found');
-      }
+      console.log('🪙 [CoinsStore] Updated coins data:', {
+        used: usedCredits,
+        total: totalCredits,
+        remaining: remainingCredits,
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
