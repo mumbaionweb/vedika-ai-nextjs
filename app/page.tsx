@@ -117,19 +117,19 @@ export default function Home() {
     setDictationTranscript('');
     setInputValue('');
     
-    console.log('Starting Web Speech API...');
-    if (hasRecognitionSupport) {
-      startListening();
+    console.log('Starting Deepgram dictation...');
+    if (hasRecognitionSupport()) {
+      await startListening();
       setIsDictating(true);
-      console.log('🎤 Web Speech API started');
+      console.log('🎤 Deepgram dictation started');
     } else {
-      console.error('❌ Web Speech API not supported in this browser');
+      console.error('❌ Speech recognition not supported in this browser');
       setIsDictating(false);
     }
   };
 
   const handleDictationStop = () => {
-    console.log('🛑 Stopping Web Speech API...');
+    console.log('🛑 Stopping Deepgram dictation...');
     stopListening();
     setIsDictating(false);
     setDictationTranscript('');
