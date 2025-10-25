@@ -391,105 +391,103 @@ export default function Home() {
                 })}
               </div>
 
-              {/* Right Side: Interaction Modes or Submit Button */}
+              {/* Right Side: Interaction Modes and Submit Button */}
               <div className="flex items-center gap-2">
-                {!isTyping ? (
-                  /* Show Interaction Mode Buttons when not typing */
-                  <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
-                    {interactionModes.map((mode) => {
-                      const Icon = mode.icon;
-                      const isSelected = interactionMode === mode.id;
-                      const isActive = (mode.id === 'dictation' && isDictating) || (mode.id === 'voice' && isVoiceMode);
-                      
-                      return (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('🔘 Interaction mode button clicked:', mode.id);
-                            console.log('🔘 Button element:', e.currentTarget);
-                            console.log('🔘 Event type:', e.type);
-                            
-                            if (mode.id === 'dictation') {
-                              console.log('🎤 Dictation button clicked, isDictating:', isDictating);
-                              if (isDictating) {
-                                // Stop dictation
-                                handleDictationStop();
-                                handleInteractionModeChange('type');
-                              } else {
-                                // Stop voice mode if active
-                                if (isVoiceMode) {
-                                  handleVoiceStop();
-                                }
-                                // Start dictation
-                                handleDictationStart();
-                                setInteractionMode('dictation');
-                              }
-                            } else if (mode.id === 'voice') {
-                              console.log('🎙️ Voice button clicked, isVoiceMode:', isVoiceMode);
-                              if (isVoiceMode) {
-                                // Stop voice mode
-                                handleVoiceStop();
-                                handleInteractionModeChange('type');
-                              } else {
-                                // Stop dictation if active
-                                if (isDictating) {
-                                  handleDictationStop();
-                                }
-                                // Start voice mode
-                                handleVoiceStart();
-                                setInteractionMode('voice');
-                              }
+                {/* Interaction Mode Buttons */}
+                <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
+                  {interactionModes.map((mode) => {
+                    const Icon = mode.icon;
+                    const isSelected = interactionMode === mode.id;
+                    const isActive = (mode.id === 'dictation' && isDictating) || (mode.id === 'voice' && isVoiceMode);
+                    
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('🔘 Interaction mode button clicked:', mode.id);
+                          console.log('🔘 Button element:', e.currentTarget);
+                          console.log('🔘 Event type:', e.type);
+                          
+                          if (mode.id === 'dictation') {
+                            console.log('🎤 Dictation button clicked, isDictating:', isDictating);
+                            if (isDictating) {
+                              // Stop dictation
+                              handleDictationStop();
+                              handleInteractionModeChange('type');
                             } else {
-                              // Type mode - stop any active modes
-                              if (isDictating) {
-                                handleDictationStop();
-                              }
+                              // Stop voice mode if active
                               if (isVoiceMode) {
                                 handleVoiceStop();
                               }
-                              handleInteractionModeChange(mode.id as 'type' | 'dictation' | 'voice');
+                              // Start dictation
+                              handleDictationStart();
+                              setInteractionMode('dictation');
                             }
-                          }}
-                          className={`p-1.5 rounded-md transition-all ${
-                            isSelected || isActive
-                              ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
-                              : 'bg-white text-secondary-600 hover:bg-secondary-100'
-                          } ${isActive ? 'animate-pulse' : ''}`}
-                          title={
-                            mode.id === 'dictation' 
-                              ? (isDictating ? 'Stop dictation' : mode.description)
-                              : mode.id === 'voice'
-                              ? (isVoiceMode ? 'Stop voice conversation' : mode.description)
-                              : mode.description
+                          } else if (mode.id === 'voice') {
+                            console.log('🎙️ Voice button clicked, isVoiceMode:', isVoiceMode);
+                            if (isVoiceMode) {
+                              // Stop voice mode
+                              handleVoiceStop();
+                              handleInteractionModeChange('type');
+                            } else {
+                              // Stop dictation if active
+                              if (isDictating) {
+                                handleDictationStop();
+                              }
+                              // Start voice mode
+                              handleVoiceStart();
+                              setInteractionMode('voice');
+                            }
+                          } else {
+                            // Type mode - stop any active modes
+                            if (isDictating) {
+                              handleDictationStop();
+                            }
+                            if (isVoiceMode) {
+                              handleVoiceStop();
+                            }
+                            handleInteractionModeChange(mode.id as 'type' | 'dictation' | 'voice');
                           }
-                          disabled={isLoading}
-                        >
-                          <Icon className="w-2.5 h-2.5" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* Show Submit Button when typing */
-                  <button
-                    type="submit"
-                    disabled={isLoading || !inputValue?.trim() || !sessionReady}
-                    onClick={(e) => {
-                      console.log('🖱️ Submit button clicked');
-                      console.log('Button disabled state:', isLoading || !inputValue?.trim() || !sessionReady);
-                      console.log('Input value when clicked:', inputValue);
-                      console.log('Interaction mode:', interactionMode);
-                      // The form onSubmit will handle the actual submission
-                    }}
-                    className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                    title="Send message"
-                  >
-                    <Send className="w-2.5 h-2.5" />
-                  </button>
-                )}
+                        }}
+                        className={`p-1.5 rounded-md transition-all ${
+                          isSelected || isActive
+                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
+                            : 'bg-white text-secondary-600 hover:bg-secondary-100'
+                        } ${isActive ? 'animate-pulse' : ''}`}
+                        title={
+                          mode.id === 'dictation' 
+                            ? (isDictating ? 'Stop dictation' : mode.description)
+                            : mode.id === 'voice'
+                            ? (isVoiceMode ? 'Stop voice conversation' : mode.description)
+                            : mode.description
+                        }
+                        disabled={isLoading}
+                      >
+                        <Icon className="w-2.5 h-2.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Submit Button - Always visible */}
+                <button
+                  type="submit"
+                  disabled={isLoading || !inputValue?.trim() || !sessionReady}
+                  onClick={(e) => {
+                    console.log('🖱️ Submit button clicked');
+                    console.log('Button disabled state:', isLoading || !inputValue?.trim() || !sessionReady);
+                    console.log('Input value when clicked:', inputValue);
+                    console.log('Interaction mode:', interactionMode);
+                    // The form onSubmit will handle the actual submission
+                  }}
+                  className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                  title="Send message"
+                >
+                  <Send className="w-2.5 h-2.5" />
+                </button>
               </div>
             </div>
           </div>

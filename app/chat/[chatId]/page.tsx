@@ -530,90 +530,88 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                 })}
               </div>
 
-              {/* Right Side: Interaction Modes or Submit Button */}
+              {/* Right Side: Interaction Modes and Submit Button */}
               <div className="flex items-center gap-2">
-                {!isTyping ? (
-                  /* Show Interaction Mode Buttons when not typing */
-                  <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
-                    {interactionModes.map((mode) => {
-                      const Icon = mode.icon;
-                      const isSelected = interactionMode === mode.id;
-                      const isActive = (mode.id === 'dictation' && isDictating) || (mode.id === 'voice' && isVoiceMode);
-                      
-                      return (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          onClick={() => {
-                            if (mode.id === 'dictation') {
-                              if (isDictating) {
-                                // Stop dictation
-                                handleDictationStop();
-                                handleInteractionModeChange('type');
-                              } else {
-                                // Stop voice mode if active
-                                if (isVoiceMode) {
-                                  handleVoiceStop();
-                                }
-                                // Start dictation
-                                handleDictationStart();
-                                setInteractionMode('dictation');
-                              }
-                            } else if (mode.id === 'voice') {
-                              if (isVoiceMode) {
-                                // Stop voice mode
-                                handleVoiceStop();
-                                handleInteractionModeChange('type');
-                              } else {
-                                // Stop dictation if active
-                                if (isDictating) {
-                                  handleDictationStop();
-                                }
-                                // Start voice mode
-                                handleVoiceStart();
-                                setInteractionMode('voice');
-                              }
+                {/* Interaction Mode Buttons */}
+                <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
+                  {interactionModes.map((mode) => {
+                    const Icon = mode.icon;
+                    const isSelected = interactionMode === mode.id;
+                    const isActive = (mode.id === 'dictation' && isDictating) || (mode.id === 'voice' && isVoiceMode);
+                    
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          if (mode.id === 'dictation') {
+                            if (isDictating) {
+                              // Stop dictation
+                              handleDictationStop();
+                              handleInteractionModeChange('type');
                             } else {
-                              // Type mode - stop any active modes
-                              if (isDictating) {
-                                handleDictationStop();
-                              }
+                              // Stop voice mode if active
                               if (isVoiceMode) {
                                 handleVoiceStop();
                               }
-                              handleInteractionModeChange(mode.id as 'type' | 'dictation' | 'voice');
+                              // Start dictation
+                              handleDictationStart();
+                              setInteractionMode('dictation');
                             }
-                          }}
-                          className={`p-1.5 rounded-md transition-all ${
-                            isSelected || isActive
-                              ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
-                              : 'bg-white text-secondary-600 hover:bg-secondary-100'
-                          } ${isActive ? 'animate-pulse' : ''}`}
-                          title={
-                            mode.id === 'dictation' 
-                              ? (isDictating ? 'Stop dictation' : mode.description)
-                              : mode.id === 'voice'
-                              ? (isVoiceMode ? 'Stop voice conversation' : mode.description)
-                              : mode.description
+                          } else if (mode.id === 'voice') {
+                            if (isVoiceMode) {
+                              // Stop voice mode
+                              handleVoiceStop();
+                              handleInteractionModeChange('type');
+                            } else {
+                              // Stop dictation if active
+                              if (isDictating) {
+                                handleDictationStop();
+                              }
+                              // Start voice mode
+                              handleVoiceStart();
+                              setInteractionMode('voice');
+                            }
+                          } else {
+                            // Type mode - stop any active modes
+                            if (isDictating) {
+                              handleDictationStop();
+                            }
+                            if (isVoiceMode) {
+                              handleVoiceStop();
+                            }
+                            handleInteractionModeChange(mode.id as 'type' | 'dictation' | 'voice');
                           }
-                          disabled={isLoading}
-                        >
-                          <Icon className="w-2.5 h-2.5" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* Show Submit Button when typing */
-                  <button
-                    type="submit"
-                    disabled={!sessionReady || isLoading || !input?.trim()}
-                    className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                    title={!sessionReady ? 'Initializing session...' : 'Send message'}
-                  >
-                    <Send className="w-2.5 h-2.5" />
-                  </button>
-                )}
+                        }}
+                        className={`p-1.5 rounded-md transition-all ${
+                          isSelected || isActive
+                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
+                            : 'bg-white text-secondary-600 hover:bg-secondary-100'
+                        } ${isActive ? 'animate-pulse' : ''}`}
+                        title={
+                          mode.id === 'dictation' 
+                            ? (isDictating ? 'Stop dictation' : mode.description)
+                            : mode.id === 'voice'
+                            ? (isVoiceMode ? 'Stop voice conversation' : mode.description)
+                            : mode.description
+                        }
+                        disabled={isLoading}
+                      >
+                        <Icon className="w-2.5 h-2.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Submit Button - Always visible */}
+                <button
+                  type="submit"
+                  disabled={!sessionReady || isLoading || !input?.trim()}
+                  className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                  title={!sessionReady ? 'Initializing session...' : 'Send message'}
+                >
+                  <Send className="w-2.5 h-2.5" />
+                </button>
               </div>
             </div>
           </div>
