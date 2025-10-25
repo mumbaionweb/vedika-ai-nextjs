@@ -7,6 +7,8 @@ import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { useCoinsRefresh } from '@/contexts/CoinsContext';
 import { config } from '@/lib/config';
 import { VoiceService } from '@/lib/services/voiceService';
+import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
+import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import type { Message } from '@/lib/types/api';
 import { Send, Search, FileText, Sparkles, Type, Mic, MessageCircle } from 'lucide-react';
 
@@ -39,6 +41,15 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [dictationTranscript, setDictationTranscript] = useState('');
   const [voiceService] = useState(() => new VoiceService());
+  
+  // ✅ Use Deepgram dictation hook
+  const {
+    transcript: speechTranscript,
+    isListening,
+    startListening,
+    stopListening,
+    isSupported: hasRecognitionSupport,
+  } = useDeepgramDictation();
 
   // Agent definitions
   const agents = [
@@ -80,6 +91,15 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
     initSession();
   }, []);
+
+  // Handle speech recognition transcript updates
+  useEffect(() => {
+    if (speechTranscript) {
+      console.log('📝 Speech transcript updated:', speechTranscript);
+      setDictationTranscript(speechTranscript);
+      setInput(speechTranscript);
+    }
+  }, [speechTranscript]);
 
   // Manual input change handler
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,13 +285,32 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
   // Dictation Mode Handlers
   const handleDictationStart = async () => {
-    console.log('🎤 Dictation mode not implemented - using Web Speech API');
+    console.log('🎤 Dictation start clicked');
+    console.log('Current state:', { isDictating, isVoiceMode, interactionMode });
+    
+    // Stop any active voice mode
+    if (isVoiceMode) {
+      handleVoiceStop();
+    }
+    
     setIsDictating(true);
     setDictationTranscript('');
     setInput('');
+    
+    console.log('Starting Deepgram dictation...');
+    if (hasRecognitionSupport()) {
+      await startListening();
+      setIsDictating(true);
+      console.log('🎤 Deepgram dictation started');
+    } else {
+      console.error('❌ Speech recognition not supported in this browser');
+      setIsDictating(false);
+    }
   };
 
   const handleDictationStop = () => {
+    console.log('🛑 Stopping Deepgram dictation...');
+    stopListening();
     setIsDictating(false);
     setDictationTranscript('');
   };
@@ -287,11 +326,11 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     setInput('');
 
     voiceService.startVoiceConversation({
-      onError: (error) => {
+      onError: (error: string) => {
         setError(error);
         setIsVoiceMode(false);
       },
-      onTranscriptionUpdate: (transcript, isFinal) => {
+      onTranscriptionUpdate: (transcript: string, isFinal: boolean) => {
         if (isFinal) {
           setInput(transcript);
         }
@@ -302,6 +341,35 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const handleVoiceStop = () => {
     voiceService.stopVoiceConversation();
     setIsVoiceMode(false);
+  };
+
+  // Voice Mode Popup Handlers
+  const handleVoiceModeClose = () => {
+    console.log('🎙️ Closing voice mode popup');
+    handleVoiceStop();
+    handleInteractionModeChange('type');
+  };
+
+  const handleVoiceModeToggleRecording = () => {
+    console.log('🎙️ Toggling voice recording, current state:', isVoiceMode);
+    console.log('🎙️ Voice service recording state:', voiceService.getIsRecording());
+    
+    // Check if voice service is actually recording
+    const isCurrentlyRecording = voiceService.getIsRecording();
+    
+    if (isCurrentlyRecording) {
+      console.log('🎙️ Stopping voice recording');
+      handleVoiceStop();
+    } else {
+      console.log('🎙️ Starting voice recording');
+      handleVoiceStart();
+    }
+  };
+
+  const handleVoiceModeSettings = () => {
+    console.log('🎙️ Opening voice mode settings');
+    // TODO: Implement voice mode settings
+    alert('Voice mode settings coming soon!');
   };
 
   // Handle interaction mode changes
@@ -418,9 +486,21 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                     ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
                     : "Ask a Follow-up Question"
                 }
-                className="w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left"
+                className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left ${
+                  isDictating && dictationTranscript ? 'text-blue-600' : ''
+                }`}
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
+              {/* Processing animation for dictation */}
+              {isDictating && dictationTranscript && (
+                <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bottom Bar with Agents and Submit */}
@@ -539,6 +619,15 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           </div>
         </form>
       </div>
+
+      {/* Voice Mode Popup */}
+      <VoiceModePopup
+        isOpen={isVoiceMode}
+        onClose={handleVoiceModeClose}
+        isRecording={voiceService.getIsRecording()}
+        onToggleRecording={handleVoiceModeToggleRecording}
+        onSettings={handleVoiceModeSettings}
+      />
     </div>
   );
 }
