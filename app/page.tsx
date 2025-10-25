@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
 import { DeviceManager } from '@/lib/utils/deviceManager';
-import { useCoinsRefresh } from '@/contexts/CoinsContext';
+import { coinsStore } from '@/lib/stores/coinsStore';
 import { config } from '@/lib/config';
 import { InteractionService } from '@/lib/services/interactionService';
 import { checkBrowserSupport } from '@/lib/utils/browserSupport';
@@ -16,7 +16,6 @@ import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'luci
 
 export default function Home() {
   const router = useRouter();
-  const { refreshCoins } = useCoinsRefresh();
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [sessionReady, setSessionReady] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -298,7 +297,7 @@ export default function Home() {
                   
                   // Refresh coins display in background (non-blocking)
                   console.log('🔄 Refreshing coins display in background...');
-                  refreshCoins();
+                  coinsStore.refresh();
                 } else {
                   console.log('⚠️ No conversation ID found in response');
                   console.log('Response headers:', Object.fromEntries(response.headers.entries()));

@@ -4,7 +4,7 @@ import { useEffect, useRef, use, useState } from 'react';
 import { apiService } from '@/lib/services/api';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { DeviceSessionApi } from '@/lib/services/deviceSessionApi';
-import { useCoinsRefresh } from '@/contexts/CoinsContext';
+import { coinsStore } from '@/lib/stores/coinsStore';
 import { config } from '@/lib/config';
 import { VoiceService } from '@/lib/services/voiceService';
 import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
@@ -20,7 +20,6 @@ interface ChatPageProps {
 
 export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = use(params);
-  const { refreshCoins } = useCoinsRefresh();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasLoadedHistoryRef = useRef(false);
 
@@ -169,7 +168,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         
         // Refresh coins display in background (non-blocking)
         console.log('🔄 [CHAT PAGE] Refreshing coins display in background...');
-        refreshCoins();
+        coinsStore.refresh();
       } else {
         const errorText = await response.text();
         console.error('❌ [CHAT PAGE] Failed to send message:', response.status, errorText);
