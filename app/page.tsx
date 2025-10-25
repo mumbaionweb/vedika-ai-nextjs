@@ -262,6 +262,15 @@ export default function Home() {
                 const conversationId = response.headers.get('x-conversation-id') || data.conversation_id;
                 console.log('✅ Message sent, conversation ID:', conversationId);
                 
+                // ✅ Update coins from chat response if available
+                if (data.vedika_coins && typeof data.vedika_coins.balance === 'number') {
+                  console.log('🪙 Received vedika_coins from chat response:', data.vedika_coins);
+                  coinsStore.updateFromChatResponse(data.vedika_coins.balance);
+                } else {
+                  console.warn('⚠️ No vedika_coins in chat response, using session refresh as fallback');
+                  coinsStore.refresh();
+                }
+                
                 if (conversationId) {
                   // Store initial messages for the chat page
                   const initialMessages = [
@@ -281,13 +290,9 @@ export default function Home() {
                   sessionStorage.setItem(`chat-${conversationId}`, JSON.stringify(initialMessages));
                   console.log('💾 Stored initial messages in sessionStorage');
                   
-                  // Navigate immediately without waiting for coins refresh
+                  // Navigate to chat page
                   console.log('🔄 Navigating to chat page:', `/chat/${conversationId}`);
                   router.push(`/chat/${conversationId}`);
-                  
-                  // Refresh coins display in background (non-blocking)
-                  console.log('🔄 Refreshing coins display in background...');
-                  coinsStore.refresh();
                 } else {
                   console.log('⚠️ No conversation ID found in response');
                   console.log('Response headers:', Object.fromEntries(response.headers.entries()));

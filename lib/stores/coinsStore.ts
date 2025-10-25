@@ -126,6 +126,22 @@ class CoinsStore {
     }
   }
 
+  // Update coins directly from chat response
+  updateFromChatResponse(balance: number) {
+    if (typeof balance === 'number' && balance >= 0) {
+      this.data.remainingCredits = balance;
+      this.data.lastUpdated = Date.now();
+      this.data.loading = false;
+      this.data.error = null;
+      
+      console.log('🪙 [CoinsStore] Updated from chat response:', balance);
+      
+      this.notify();
+    } else {
+      console.warn('⚠️ [CoinsStore] Invalid balance value:', balance);
+    }
+  }
+
   // Force refresh (e.g., after message sent)
   async refresh(): Promise<void> {
     return this.fetchCoins(true);

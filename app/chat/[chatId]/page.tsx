@@ -155,6 +155,15 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         const data = await response.json();
         console.log('✅ [CHAT PAGE] Response received:', data);
         
+        // ✅ Update coins from chat response if available
+        if (data.vedika_coins && typeof data.vedika_coins.balance === 'number') {
+          console.log('🪙 [CHAT PAGE] Received vedika_coins from response:', data.vedika_coins);
+          coinsStore.updateFromChatResponse(data.vedika_coins.balance);
+        } else {
+          console.warn('⚠️ [CHAT PAGE] No vedika_coins in response, using session refresh as fallback');
+          coinsStore.refresh();
+        }
+        
         // Add assistant response to chat
         const assistantMessage: Message = {
           id: `assistant-${Date.now()}`,
@@ -163,10 +172,6 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           timestamp: new Date().toISOString(),
         };
         setMessages(prev => [...prev, assistantMessage]);
-        
-        // Refresh coins display in background (non-blocking)
-        console.log('🔄 [CHAT PAGE] Refreshing coins display in background...');
-        coinsStore.refresh();
       } else {
         const errorText = await response.text();
         console.error('❌ [CHAT PAGE] Failed to send message:', response.status, errorText);
