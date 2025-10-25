@@ -23,6 +23,10 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const isRecordingRef = useRef(false);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const maxReconnectAttempts = 3;
+  const reconnectAttemptsRef = useRef(0);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -32,6 +36,18 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
   }, []);
 
   const cleanup = () => {
+    // Clear any pending reconnection attempts
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    
+    // Clear keep-alive interval
+    if (keepAliveIntervalRef.current) {
+      clearInterval(keepAliveIntervalRef.current);
+      keepAliveIntervalRef.current = null;
+    }
+    
     if (socketRef.current) {
       socketRef.current.close();
       socketRef.current = null;
@@ -50,6 +66,7 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
     }
     
     setIsListening(false);
+    reconnectAttemptsRef.current = 0;
   };
 
   const startListening = async () => {
@@ -105,6 +122,15 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
       socket.onopen = () => {
         console.log('✅ Connected to Deepgram');
         startAudioStreaming();
+        
+        // Start keep-alive mechanism to prevent connection drops
+        keepAliveIntervalRef.current = setInterval(() => {
+          if (socketRef.current?.readyState === WebSocket.OPEN) {
+            // Send a ping to keep connection alive
+            socketRef.current.send(JSON.stringify({ type: 'KeepAlive' }));
+            console.log('💓 Keep-alive sent');
+          }
+        }, 30000); // Send every 30 seconds
       };
       
       socket.onmessage = (message) => {
@@ -128,12 +154,8 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
             
             setTranscript(transcript);
             
-            if (isFinal) {
-              // Auto-stop after final result
-              setTimeout(() => {
-                stopListening();
-              }, 1000);
-            }
+            // Don't auto-stop - let user control when to stop
+            // This makes it feel more natural and continuous
           } else {
             console.log('📝 No transcript in response:', data);
           }
@@ -178,9 +200,17 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
             break;
           case 1005:
             console.log('❌ No status received (connection lost)');
+            // Attempt reconnection for connection lost
+            if (isListening && reconnectAttemptsRef.current < maxReconnectAttempts) {
+              attemptReconnection();
+            }
             break;
           case 1006:
             console.log('❌ Abnormal closure');
+            // Attempt reconnection for abnormal closure
+            if (isListening && reconnectAttemptsRef.current < maxReconnectAttempts) {
+              attemptReconnection();
+            }
             break;
           case 1007:
             console.log('❌ Invalid frame payload data');
@@ -213,7 +243,11 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
             console.log('❓ Unknown close code:', event.code);
         }
         
-        cleanup();
+        // Only cleanup if we're not attempting reconnection
+        if (reconnectAttemptsRef.current >= maxReconnectAttempts || 
+            (event.code !== 1005 && event.code !== 1006)) {
+          cleanup();
+        }
       };
       
       setIsListening(true);
@@ -224,6 +258,61 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
       setError(error instanceof Error ? error.message : 'Failed to start');
       cleanup();
     }
+  };
+
+  const attemptReconnection = async () => {
+    if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+      console.log('❌ Max reconnection attempts reached');
+      cleanup();
+      return;
+    }
+
+    reconnectAttemptsRef.current++;
+    const delay = Math.pow(2, reconnectAttemptsRef.current) * 1000; // Exponential backoff
+    
+    console.log(`🔄 Attempting reconnection ${reconnectAttemptsRef.current}/${maxReconnectAttempts} in ${delay}ms...`);
+    
+    reconnectTimeoutRef.current = setTimeout(async () => {
+      try {
+        // Get fresh API key
+        const response = await fetch(`${config.api.baseUrl}/deepgram/token`);
+        const data = await response.json();
+        
+        if (!data.apiKey) {
+          throw new Error('Failed to get fresh API key');
+        }
+        
+        // Create new WebSocket connection
+        const wsUrl = 'wss://api.deepgram.com/v1/listen?' + new URLSearchParams({
+          encoding: 'linear16',
+          sample_rate: '16000',
+          channels: '1',
+          model: 'nova-2',
+          language: 'en-US',
+          punctuate: 'true',
+          interim_results: 'true',
+          endpointing: '300',
+          smart_format: 'true'
+        });
+        
+        const newSocket = new WebSocket(wsUrl, ['token', data.apiKey]);
+        
+        // Copy event handlers from the original socket
+        newSocket.onopen = () => {
+          console.log('✅ Reconnected to Deepgram');
+          socketRef.current = newSocket;
+          reconnectAttemptsRef.current = 0; // Reset on successful reconnection
+        };
+        
+        newSocket.onmessage = socketRef.current?.onmessage;
+        newSocket.onerror = socketRef.current?.onerror;
+        newSocket.onclose = socketRef.current?.onclose;
+        
+      } catch (error) {
+        console.error('❌ Reconnection failed:', error);
+        attemptReconnection(); // Try again
+      }
+    }, delay);
   };
 
   const startAudioStreaming = () => {
@@ -238,7 +327,8 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
       const source = audioContext.createMediaStreamSource(mediaStreamRef.current);
       
       // Create a ScriptProcessorNode to process audio in real-time
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      // Using larger buffer size for more stable processing
+      const processor = audioContext.createScriptProcessor(8192, 1, 1);
       
       processor.onaudioprocess = (event) => {
         if (socketRef.current?.readyState === WebSocket.OPEN) {
