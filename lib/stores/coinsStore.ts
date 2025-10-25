@@ -6,8 +6,6 @@
 import { sessionManager } from '../utils/sessionManager';
 
 interface CoinsData {
-  usedCredits: number;
-  totalCredits: number;
   remainingCredits: number;
   lastUpdated: number;
   loading: boolean;
@@ -16,8 +14,6 @@ interface CoinsData {
 
 class CoinsStore {
   private data: CoinsData = {
-    usedCredits: 0,
-    totalCredits: 20,
     remainingCredits: 20,
     lastUpdated: 0,
     loading: false,
@@ -93,23 +89,15 @@ class CoinsStore {
       const session = await sessionManager.getSession();
       
       const remainingCredits = session.credits_remaining;
-      const totalCredits = session.daily_credits;
-      const usedCredits = Math.max(0, totalCredits - remainingCredits);
 
       this.data = {
-        usedCredits,
-        totalCredits,
         remainingCredits,
         lastUpdated: Date.now(),
         loading: false,
         error: null,
       };
 
-      console.log('🪙 [CoinsStore] Updated coins data:', {
-        used: usedCredits,
-        total: totalCredits,
-        remaining: remainingCredits,
-      });
+      console.log('🪙 [CoinsStore] Updated coins balance:', remainingCredits);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
@@ -127,19 +115,12 @@ class CoinsStore {
   // Manually update coins (e.g., after sending a message)
   updateCoinsUsage(creditsUsed: number) {
     if (creditsUsed > 0) {
-      this.data.usedCredits = Math.min(
-        this.data.usedCredits + creditsUsed,
-        this.data.totalCredits
-      );
       this.data.remainingCredits = Math.max(
-        this.data.totalCredits - this.data.usedCredits,
+        this.data.remainingCredits - creditsUsed,
         0
       );
       
-      console.log('🪙 [CoinsStore] Updated usage locally:', {
-        used: this.data.usedCredits,
-        remaining: this.data.remainingCredits,
-      });
+      console.log('🪙 [CoinsStore] Updated balance locally:', this.data.remainingCredits);
       
       this.notify();
     }
@@ -153,8 +134,6 @@ class CoinsStore {
   // Clear cache and reset
   reset() {
     this.data = {
-      usedCredits: 0,
-      totalCredits: 20,
       remainingCredits: 20,
       lastUpdated: 0,
       loading: false,

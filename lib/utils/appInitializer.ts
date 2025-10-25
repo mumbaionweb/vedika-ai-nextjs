@@ -9,7 +9,7 @@ import { checkBrowserSupport } from './browserSupport';
 
 interface InitializationResult {
   sessionId: string;
-  credits: number;
+  remainingCredits: number;
   browserSupport: any;
 }
 
@@ -32,7 +32,7 @@ class AppInitializer {
         console.log('⚡ [AppInitializer] App already initialized');
         return {
           sessionId: cachedSession.session_id,
-          credits: cachedSession.credits_remaining,
+          remainingCredits: cachedSession.credits_remaining,
           browserSupport: null, // Already checked
         };
       }
@@ -66,7 +66,7 @@ class AppInitializer {
     
     return {
       sessionId: session.session_id,
-      credits: session.credits_remaining,
+      remainingCredits: session.credits_remaining,
       browserSupport,
     };
   }

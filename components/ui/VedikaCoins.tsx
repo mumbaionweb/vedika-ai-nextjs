@@ -8,7 +8,7 @@ interface VedikaCoinsProps {
 }
 
 export default function VedikaCoins({ className = '' }: VedikaCoinsProps) {
-  const { usedCredits, totalCredits, loading, error } = useCoinsStore();
+  const { remainingCredits, loading, error } = useCoinsStore();
 
   // Show loading state
   if (loading) {
@@ -56,10 +56,10 @@ export default function VedikaCoins({ className = '' }: VedikaCoinsProps) {
              style={{ animation: 'pulse 3.9s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}></div>
       </div>
       
-      {/* Usage Display */}
+      {/* Balance Display */}
       <div className="flex flex-col">
-        <span className="text-xs font-semibold text-gray-800">
-          {usedCredits}/{totalCredits}
+        <span className="text-sm font-semibold text-gray-800">
+          {remainingCredits}
         </span>
       </div>
     </div>

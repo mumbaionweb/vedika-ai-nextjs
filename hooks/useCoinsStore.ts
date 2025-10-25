@@ -22,7 +22,9 @@ export function useCoinsStore() {
   }, []);
 
   return {
-    ...data,
+    remainingCredits: data.remainingCredits,
+    loading: data.loading,
+    error: data.error,
     refresh: () => coinsStore.refresh(),
     updateUsage: (creditsUsed: number) => coinsStore.updateCoinsUsage(creditsUsed),
   };
