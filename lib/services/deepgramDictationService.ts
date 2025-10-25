@@ -304,9 +304,16 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
           reconnectAttemptsRef.current = 0; // Reset on successful reconnection
         };
         
-        newSocket.onmessage = socketRef.current?.onmessage;
-        newSocket.onerror = socketRef.current?.onerror;
-        newSocket.onclose = socketRef.current?.onclose;
+        // Only assign handlers if they exist
+        if (socketRef.current?.onmessage) {
+          newSocket.onmessage = socketRef.current.onmessage;
+        }
+        if (socketRef.current?.onerror) {
+          newSocket.onerror = socketRef.current.onerror;
+        }
+        if (socketRef.current?.onclose) {
+          newSocket.onclose = socketRef.current.onclose;
+        }
         
       } catch (error) {
         console.error('❌ Reconnection failed:', error);
