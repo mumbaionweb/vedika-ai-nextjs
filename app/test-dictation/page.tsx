@@ -162,7 +162,7 @@ export default function TestDictationPage() {
             {transcript ? (
               <p className="text-lg text-gray-900">{transcript}</p>
             ) : (
-              <p className="text-gray-500 italic">No transcript yet. Click "Start Recording" and speak clearly.</p>
+              <p className="text-gray-500 italic">No transcript yet. Click &quot;Start Recording&quot; and speak clearly.</p>
             )}
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function TestDictationPage() {
         <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-lg font-semibold text-blue-900 mb-3">🧪 Testing Instructions</h3>
           <ol className="list-decimal list-inside space-y-2 text-blue-800">
-            <li>Click "Start Recording" button</li>
+            <li>Click &quot;Start Recording&quot; button</li>
             <li>Allow microphone access when prompted</li>
             <li>Speak clearly into your microphone</li>
             <li>Watch the transcript appear in real-time</li>
