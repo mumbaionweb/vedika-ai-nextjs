@@ -38,7 +38,9 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
     }
     
     if (mediaRecorderRef.current && isRecordingRef.current) {
-      mediaRecorderRef.current.stop();
+      if ((mediaRecorderRef.current as any).audioContext) {
+        (mediaRecorderRef.current as any).audioContext.close();
+      }
       isRecordingRef.current = false;
     }
     
@@ -107,7 +109,11 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
       
       socket.onmessage = (message) => {
         try {
+          console.log('📨 Received message from Deepgram:', message.data);
           const data = JSON.parse(message.data);
+          
+          // Log the full response structure for debugging
+          console.log('📋 Deepgram response structure:', data);
           
           if (data.channel?.alternatives?.[0]?.transcript) {
             const transcript = data.channel.alternatives[0].transcript;
@@ -128,20 +134,85 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
                 stopListening();
               }, 1000);
             }
+          } else {
+            console.log('📝 No transcript in response:', data);
           }
         } catch (error) {
           console.error('❌ Error parsing message:', error);
+          console.error('❌ Raw message data:', message.data);
         }
       };
       
       socket.onerror = (error) => {
         console.error('❌ WebSocket error:', error);
+        console.error('❌ WebSocket error details:', {
+          type: error.type,
+          target: error.target,
+          currentTarget: error.currentTarget
+        });
         setError('WebSocket connection failed');
         cleanup();
       };
       
       socket.onclose = (event) => {
         console.log('🔌 WebSocket closed:', event.code, event.reason);
+        console.log('🔌 WebSocket close details:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
+        
+        // Log specific close codes for debugging
+        switch (event.code) {
+          case 1000:
+            console.log('✅ Normal closure');
+            break;
+          case 1001:
+            console.log('🚪 Going away');
+            break;
+          case 1002:
+            console.log('❌ Protocol error');
+            break;
+          case 1003:
+            console.log('❌ Unsupported data');
+            break;
+          case 1005:
+            console.log('❌ No status received (connection lost)');
+            break;
+          case 1006:
+            console.log('❌ Abnormal closure');
+            break;
+          case 1007:
+            console.log('❌ Invalid frame payload data');
+            break;
+          case 1008:
+            console.log('❌ Policy violation');
+            break;
+          case 1009:
+            console.log('❌ Message too big');
+            break;
+          case 1010:
+            console.log('❌ Missing extension');
+            break;
+          case 1011:
+            console.log('❌ Internal error');
+            break;
+          case 1012:
+            console.log('❌ Service restart');
+            break;
+          case 1013:
+            console.log('❌ Try again later');
+            break;
+          case 1014:
+            console.log('❌ Bad gateway');
+            break;
+          case 1015:
+            console.log('❌ TLS handshake');
+            break;
+          default:
+            console.log('❓ Unknown close code:', event.code);
+        }
+        
         cleanup();
       };
       
@@ -162,34 +233,39 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
     }
 
     try {
-      const mediaRecorder = new MediaRecorder(mediaStreamRef.current, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      // Create AudioContext for proper audio processing
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const source = audioContext.createMediaStreamSource(mediaStreamRef.current);
       
-      mediaRecorderRef.current = mediaRecorder;
+      // Create a ScriptProcessorNode to process audio in real-time
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
       
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && socketRef.current?.readyState === WebSocket.OPEN) {
-          socketRef.current.send(event.data);
-          console.log('📤 Sent audio chunk:', event.data.size, 'bytes');
+      processor.onaudioprocess = (event) => {
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          const audioData = event.inputBuffer.getChannelData(0);
+          
+          // Convert Float32 to Int16 PCM (Deepgram expects linear16)
+          const pcmData = new Int16Array(audioData.length);
+          for (let i = 0; i < audioData.length; i++) {
+            const sample = Math.max(-1, Math.min(1, audioData[i]));
+            pcmData[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+          }
+          
+          // Send PCM data to Deepgram
+          socketRef.current.send(pcmData.buffer);
+          console.log('📤 Sent audio chunk:', pcmData.length, 'samples');
         }
       };
       
-      mediaRecorder.onstop = () => {
-        console.log('🛑 MediaRecorder stopped');
-      };
+      // Connect audio processing chain
+      source.connect(processor);
+      processor.connect(audioContext.destination);
       
-      mediaRecorder.onerror = (error) => {
-        console.error('❌ MediaRecorder error:', error);
-        setError('Recording failed');
-        cleanup();
-      };
-      
-      // Start recording - send chunks every 250ms for real-time
-      mediaRecorder.start(250);
+      // Store references for cleanup
+      (mediaRecorderRef as any).current = { audioContext, processor };
       isRecordingRef.current = true;
       
-      console.log('✅ Audio streaming started (chunks every 250ms)');
+      console.log('✅ Audio streaming started (PCM format, 16kHz)');
       
     } catch (error) {
       console.error('❌ Failed to start audio streaming:', error);
@@ -202,12 +278,13 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
     console.log('🛑 Stopping transcription...');
     
     if (mediaRecorderRef.current && isRecordingRef.current) {
-      mediaRecorderRef.current.stop();
+      if ((mediaRecorderRef.current as any).audioContext) {
+        (mediaRecorderRef.current as any).audioContext.close();
+      }
       isRecordingRef.current = false;
     }
     
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: 'CloseStream' }));
       socketRef.current.close();
     }
     
