@@ -348,7 +348,7 @@ export default function Home() {
                     : "Ask me anything about your business or get help with your tasks."
                 }
                 className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left ${
-                  isDictating && dictationTranscript ? 'text-blue-600' : ''
+                  isDictating && dictationTranscript ? 'text-gray-600' : ''
                 }`}
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
@@ -356,9 +356,9 @@ export default function Home() {
               {isDictating && dictationTranscript && (
                 <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
                   <div className="flex space-x-1">
-                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse"></div>
-                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-1 h-4 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse"></div>
+                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
               )}
