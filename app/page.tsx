@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
+import { appInitializer } from '@/lib/utils/appInitializer';
 import { sessionManager } from '@/lib/utils/sessionManager';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { coinsStore } from '@/lib/stores/coinsStore';
 import { config } from '@/lib/config';
 import { InteractionService } from '@/lib/services/interactionService';
-import { checkBrowserSupport } from '@/lib/utils/browserSupport';
 import { VoiceService } from '@/lib/services/voiceService';
 import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
@@ -63,22 +63,13 @@ export default function Home() {
 
   async function initializeSession() {
     try {
-      console.log('🚀 Initializing vedika-ai session...');
+      // Use centralized app initializer to prevent duplicate setup
+      const result = await appInitializer.initialize();
       
-      // Log browser capabilities once
-      checkBrowserSupport();
-      
-      // Use sessionManager to prevent duplicate API calls
-      const sessionResult = await sessionManager.getSession();
-      
-      console.log('✅ Session ready:', {
-        sessionId: sessionResult.session_id,
-        credits: sessionResult.credits_remaining,
-      });
+      console.log('✅ [Homepage] Ready with session:', result.sessionId);
       setSessionReady(true);
     } catch (error) {
-      console.error('❌ Session initialization failed:', error);
-      console.error('Error details:', error);
+      console.error('❌ [Homepage] Initialization failed:', error);
       setSessionReady(false);
       
       // For debugging - let's also try to see what the error is

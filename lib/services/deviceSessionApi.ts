@@ -125,10 +125,7 @@ export class DeviceSessionApi {
       }
       
       const data: DeviceSessionResponse = await response.json();
-      console.log('✅ Session valid:', {
-        credits: data.credits_remaining,
-        expiresAt: data.expires_at
-      });
+      // Session validation successful (detailed logging moved to SessionManager)
       
       return data;
     } catch (error) {

@@ -73,7 +73,11 @@ class SessionManager {
           ...session,
           lastValidated: Date.now(),
         };
-        console.log('✅ [SessionManager] Session validated successfully');
+        console.log('✅ [SessionManager] Session validated:', {
+          sessionId: session.session_id,
+          credits: session.credits_remaining,
+          expiresAt: session.expires_at
+        });
         return this.sessionData;
       } else {
         // Session invalid, create new one

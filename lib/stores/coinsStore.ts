@@ -87,7 +87,7 @@ class CoinsStore {
 
   private async _performFetch(): Promise<void> {
     try {
-      console.log('🪙 [CoinsStore] Fetching fresh coins data...');
+      console.log('🪙 [CoinsStore] Updating coins from session data...');
       
       // Use sessionManager to avoid duplicate API calls
       const session = await sessionManager.getSession();
