@@ -18,6 +18,8 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const accumulatedTranscriptRef = useRef('');
+  const lastFinalIndexRef = useRef(0);
   
   const socketRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -152,7 +154,23 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
               `(${(confidence * 100).toFixed(1)}%)`
             );
             
-            setTranscript(transcript);
+            if (isFinal) {
+              // For final results, append to accumulated transcript
+              if (accumulatedTranscriptRef.current && !accumulatedTranscriptRef.current.endsWith(' ')) {
+                accumulatedTranscriptRef.current += ' ';
+              }
+              accumulatedTranscriptRef.current += transcript;
+              lastFinalIndexRef.current = accumulatedTranscriptRef.current.length;
+              setTranscript(accumulatedTranscriptRef.current);
+              console.log('📝 Accumulated transcript:', accumulatedTranscriptRef.current);
+            } else {
+              // For interim results, append to the accumulated transcript
+              let currentText = accumulatedTranscriptRef.current;
+              if (transcript) {
+                // Show accumulated + interim
+                setTranscript(currentText + (currentText ? ' ' : '') + transcript);
+              }
+            }
             
             // Don't auto-stop - let user control when to stop
             // This makes it feel more natural and continuous
@@ -249,6 +267,11 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
           cleanup();
         }
       };
+      
+      // Reset accumulated transcript for new session
+      accumulatedTranscriptRef.current = '';
+      lastFinalIndexRef.current = 0;
+      setTranscript('');
       
       setIsListening(true);
       setError(null);
@@ -386,6 +409,10 @@ export const useDeepgramDictation = (): DeepgramDictationService => {
     }
     
     cleanup();
+    
+    // Keep the accumulated transcript in the UI
+    // User can see what was transcribed before manually clearing if needed
+    
     console.log('✅ Transcription stopped');
   };
 
