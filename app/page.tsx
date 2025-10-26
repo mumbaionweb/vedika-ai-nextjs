@@ -67,12 +67,14 @@ export default function Home() {
       
       try {
         setLoadingModels(true);
+        console.log('🔄 Loading models from API...');
         const models = await routingApi.getAvailableModels();
         console.log('✅ Loaded models from API:', models);
         setAvailableModels(models);
       } catch (error) {
-        console.error('❌ Failed to load models:', error);
+        console.warn('⚠️ Failed to load models from API (this is normal if backend is not running):', error);
         // Keep default "Best" option even if API fails
+        setAvailableModels([]);
       } finally {
         setLoadingModels(false);
       }
