@@ -36,3 +36,17 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Cache and temporary files
+.cache
+.turbo
+.temp
+tmp/
+*.log
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.docker/
+dist/
+
