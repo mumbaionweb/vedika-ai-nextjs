@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
@@ -60,6 +60,27 @@ export default function Home() {
     initializeSession();
   }, []);
 
+  // Load available models from API
+  useEffect(() => {
+    const loadModels = async () => {
+      if (!sessionReady) return;
+      
+      try {
+        setLoadingModels(true);
+        const models = await routingApi.getAvailableModels();
+        console.log('✅ Loaded models from API:', models);
+        setAvailableModels(models);
+      } catch (error) {
+        console.error('❌ Failed to load models:', error);
+        // Keep default "Best" option even if API fails
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    loadModels();
+  }, [sessionReady]);
+
   // Debug state changes
   useEffect(() => {
     console.log('🔄 State changed - inputValue:', inputValue, 'dictationTranscript:', dictationTranscript);
@@ -99,12 +120,14 @@ export default function Home() {
     { id: 'agents', icon: Sparkles, label: 'Agents' },
   ];
 
-  const models = [
-    { id: 'best', label: 'Best', description: 'Best overall performance' },
-    { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet', description: 'Balanced performance' },
-    { id: 'gpt-4', label: 'GPT-4', description: 'High accuracy' },
-    { id: 'claude-3-haiku', label: 'Claude 3 Haiku', description: 'Fast and efficient' },
-  ];
+  // Combine "Best" default option with API models
+  const models = React.useMemo(() => {
+    const bestOption = { id: 'best', name: 'Best', description: 'Best overall performance (Auto-select)', speed: 'Automatic', cost: 'Variable', best_for: 'All use cases' };
+    if (availableModels.length === 0) {
+      return [bestOption];
+    }
+    return [bestOption, ...availableModels];
+  }, [availableModels]);
 
   const sources = [
     { id: 'web', icon: Globe, label: 'Web', description: 'Search the web' },
@@ -456,7 +479,7 @@ export default function Home() {
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
                     className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
-                    title={`AI Model: ${models.find(m => m.id === selectedModel)?.label || 'Best'}`}
+                    title={`AI Model: ${models.find(m => m.id === selectedModel)?.name || 'Best'}`}
                     disabled={isLoading}
                   >
                     <Bot className="w-2.5 h-2.5" />
@@ -643,9 +666,14 @@ export default function Home() {
                         <div className={`font-medium text-sm ${
                           selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
                         }`}>
-                          {model.label}
+                          {model.name}
                         </div>
                         <div className="text-xs text-secondary-500">{model.description}</div>
+                        {model.speed && model.cost && (
+                          <div className="text-xs text-secondary-400 mt-1">
+                            {model.speed} • {model.cost}
+                          </div>
+                        )}
                       </div>
                       {selectedModel === model.id && (
                         <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
