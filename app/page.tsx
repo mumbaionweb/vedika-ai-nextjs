@@ -450,14 +450,10 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    className="flex items-center gap-1 p-1.5 bg-white border border-secondary-200 rounded-lg hover:bg-secondary-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Select AI Model"
+                    className="p-1.5 bg-white border border-secondary-200 rounded-lg hover:bg-secondary-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={`AI Model: ${models.find(m => m.id === selectedModel)?.label || 'Best'}`}
                     disabled={isLoading}
                   >
-                    <Bot className="w-2.5 h-2.5 text-secondary-600" />
-                    <span className="text-xs text-secondary-600 font-medium">
-                      {models.find(m => m.id === selectedModel)?.label || 'Best'}
-                    </span>
                     {showModelDropdown ? (
                       <ChevronUp className="w-2.5 h-2.5 text-secondary-600" />
                     ) : (
@@ -467,7 +463,7 @@ export default function Home() {
 
                   {/* Model Dropdown */}
                   {showModelDropdown && (
-                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-white border border-secondary-200 rounded-lg shadow-lg py-2 z-50">
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-secondary-200 rounded-lg shadow-lg py-2 z-50">
                       {models.map((model) => (
                         <button
                           key={model.id}
