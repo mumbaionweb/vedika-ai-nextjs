@@ -2,39 +2,9 @@
 const nextConfig = {
   reactStrictMode: false,  // Disabled to prevent double-rendering and WebSocket disconnection issues
   
-  // Performance optimizations
-  swcMinify: true,  // Use SWC for minification (faster than Terser)
-  
   // Compiler optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',  // Remove console.log in production
-  },
-  
-  // Experimental optimizations
-  experimental: {
-    // optimizeCss: true,  // Disabled - requires critters module
-  },
-  
-  // Webpack optimizations
-  webpack: (config, { isServer }) => {
-    // Reduce memory usage
-    config.optimization = {
-      ...config.optimization,
-      moduleIds: 'deterministic',
-      minimize: true,
-    };
-    
-    // Optimize bundle size
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
-    
-    return config;
   },
   
   // Image optimization
