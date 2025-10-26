@@ -12,13 +12,7 @@ const nextConfig = {
   
   // Experimental optimizations
   experimental: {
-    optimizeCss: true,  // Optimize CSS loading
-    turbo: {
-      resolveAlias: {
-        // Optimize imports
-        'lucide-react': 'lucide-react/dist/esm/icons/index.js',
-      },
-    },
+    // optimizeCss: true,  // Disabled - requires critters module
   },
   
   // Webpack optimizations

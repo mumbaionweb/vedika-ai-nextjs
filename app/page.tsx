@@ -12,7 +12,7 @@ import { InteractionService } from '@/lib/services/interactionService';
 import { VoiceService } from '@/lib/services/voiceService';
 import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
-import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle, Loader2, Globe, Paperclip, Bot, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle, Loader, Globe, Paperclip, Bot, ChevronDown, ChevronUp } from 'lucide-react';
 import { routingApi, type Model } from '@/lib/services/routingApi';
 
 export default function Home() {
@@ -373,7 +373,7 @@ export default function Home() {
               {(isDictating && dictationTranscript) || isLoading ? (
                 <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
                   {isLoading ? (
-                    <Loader2 className="w-5 h-5 text-primary-500 animate-spin" />
+                    <Loader className="w-5 h-5 text-primary-500 animate-spin" />
                   ) : (
                     <div className="flex space-x-1">
                       <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse"></div>
@@ -580,7 +580,7 @@ export default function Home() {
                   title={isLoading ? "Sending..." : "Send message"}
                 >
                   {isLoading ? (
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                    <Loader className="w-2.5 h-2.5 animate-spin" />
                   ) : (
                     <Send className="w-2.5 h-2.5" />
                   )}
