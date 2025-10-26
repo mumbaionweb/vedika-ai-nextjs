@@ -43,9 +43,15 @@ class RoutingApiService {
    */
   async getAvailableModels(): Promise<Model[]> {
     try {
+      console.log('🔍 Fetching models from:', `${this.baseUrl}/routing/models`);
       const response = await fetch(`${this.baseUrl}/routing/models`);
       
       if (!response.ok) {
+        // If endpoint doesn't exist yet (404), return empty array
+        if (response.status === 404) {
+          console.warn('⚠️ Models endpoint not found (404). Using default "Best" option only.');
+          return [];
+        }
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }
       
@@ -53,7 +59,8 @@ class RoutingApiService {
       return data.models;
     } catch (error) {
       console.error('Error fetching models:', error);
-      throw error;
+      // Return empty array so UI still shows "Best" option
+      return [];
     }
   }
 
