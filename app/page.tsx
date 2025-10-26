@@ -450,21 +450,17 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    className="p-1.5 bg-white border border-secondary-200 rounded-lg hover:bg-secondary-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
                     title={`AI Model: ${models.find(m => m.id === selectedModel)?.label || 'Best'}`}
                     disabled={isLoading}
                   >
-                    <Bot className="w-2.5 h-2.5 text-secondary-600" />
-                    {showModelDropdown ? (
-                      <ChevronUp className="w-2.5 h-2.5 text-secondary-600" />
-                    ) : (
-                      <ChevronDown className="w-2.5 h-2.5 text-secondary-600" />
-                    )}
+                    <Bot className="w-2.5 h-2.5" />
                   </button>
 
-                  {/* Model Dropdown */}
+                  {/* Model Dropdown - Overlay */}
                   {showModelDropdown && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-secondary-200 rounded-lg shadow-lg py-2 z-[9999]">
+                    <div className="fixed top-0 left-0 right-0 bottom-0 z-[9999]" onClick={() => setShowModelDropdown(false)}>
+                      <div className="absolute bottom-20 left-4 w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2" onClick={(e) => e.stopPropagation()}>
                       {models.map((model) => (
                         <button
                           key={model.id}
@@ -492,6 +488,7 @@ export default function Home() {
                           </div>
                         </button>
                       ))}
+                      </div>
                     </div>
                   )}
                 </div>
