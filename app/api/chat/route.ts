@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       session_id: body.session_id,
       model_id: body.model_id,
     });
+    console.log('🔗 [API Route] Backend URL:', `${API_BASE_URL}/ai/chat`);
     
     const response = await fetch(`${API_BASE_URL}/ai/chat`, {
       method: 'POST',
@@ -30,8 +31,9 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ [API Route] Chat API Error:', errorText);
+      console.error('❌ [API Route] Response status:', response.status);
       return NextResponse.json(
-        { error: `Chat API error: ${response.statusText}` },
+        { error: `Chat API error: ${response.statusText}`, details: errorText },
         { status: response.status }
       );
     }
@@ -50,8 +52,19 @@ export async function POST(request: Request) {
     return NextResponse.json(data, { headers });
   } catch (error) {
     console.error('❌ [API Route] Error in chat route:', error);
+    
+    // Check if it's a fetch error (network issue)
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('🌐 Network error - backend may be unreachable');
+      console.error('💡 Backend URL:', `${API_BASE_URL}/ai/chat`);
+      return NextResponse.json(
+        { error: 'Unable to connect to backend API', details: error.message },
+        { status: 502 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
