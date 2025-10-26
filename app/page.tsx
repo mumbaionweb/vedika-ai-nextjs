@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { appInitializer } from '@/lib/utils/appInitializer';
@@ -17,6 +18,7 @@ import { routingApi, type Model } from '@/lib/services/routingApi';
 
 export default function Home() {
   const router = useRouter();
+  const buttonRef = useRef<HTMLDivElement>(null);
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [sessionReady, setSessionReady] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -336,7 +338,7 @@ export default function Home() {
             }
           }
         }} className="space-y-4">
-          <div className="bg-stone-50 rounded-2xl shadow-2xl border-2 border-primary-300 overflow-hidden">
+          <div className="bg-stone-50 rounded-2xl shadow-2xl border-2 border-primary-300 overflow-visible">
             {/* Input Area */}
             <div className="relative">
               <input
@@ -449,7 +451,7 @@ export default function Home() {
               {/* Right Side: Model, Interaction Modes and Submit Button */}
               <div className="flex items-center gap-2">
                 {/* Model Selection Button */}
-                <div className="relative">
+                <div className="relative" ref={buttonRef}>
                   <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
@@ -459,45 +461,6 @@ export default function Home() {
                   >
                     <Bot className="w-2.5 h-2.5" />
                   </button>
-
-                  {/* Model Dropdown - Positioned below button */}
-                  {showModelDropdown && (
-                    <>
-                      {/* Backdrop overlay */}
-                      <div className="fixed inset-0 z-[9998]" onClick={() => setShowModelDropdown(false)} />
-                      
-                      {/* Dropdown menu */}
-                      <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2 z-[9999]" onClick={(e) => e.stopPropagation()}>
-                        {models.map((model) => (
-                          <button
-                            key={model.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedModel(model.id);
-                              setShowModelDropdown(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 hover:bg-secondary-50 transition-all ${
-                              selectedModel === model.id ? 'bg-primary-50' : ''
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className={`font-medium text-sm ${
-                                  selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
-                                }`}>
-                                  {model.label}
-                                </div>
-                                <div className="text-xs text-secondary-500">{model.description}</div>
-                              </div>
-                              {selectedModel === model.id && (
-                                <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
-                              )}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
                 </div>
 
                 {/* Interaction Mode Buttons */}
@@ -644,6 +607,55 @@ export default function Home() {
         onToggleRecording={handleVoiceModeToggleRecording}
         onSettings={handleVoiceModeSettings}
       />
+      
+      {/* Model Dropdown Portal - rendered outside overflow container */}
+      {typeof document !== 'undefined' && showModelDropdown && buttonRef.current && 
+        createPortal(
+          <>
+            {/* Backdrop overlay */}
+            <div className="fixed inset-0 z-[9998]" onClick={() => setShowModelDropdown(false)} />
+            
+            {/* Dropdown menu - positioned below button */}
+            <div 
+              className="fixed w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2 z-[9999]" 
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                top: buttonRef.current.getBoundingClientRect().bottom + 8,
+                left: buttonRef.current.getBoundingClientRect().left
+              }}
+            >
+              {models.map((model) => (
+                <button
+                  key={model.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedModel(model.id);
+                    setShowModelDropdown(false);
+                  }}
+                  className={`w-full text-left px-4 py-2 hover:bg-secondary-50 transition-all ${
+                    selectedModel === model.id ? 'bg-primary-50' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className={`font-medium text-sm ${
+                        selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
+                      }`}>
+                        {model.label}
+                      </div>
+                      <div className="text-xs text-secondary-500">{model.description}</div>
+                    </div>
+                    {selectedModel === model.id && (
+                      <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body
+        )
+      }
     </div>
   );
 }
