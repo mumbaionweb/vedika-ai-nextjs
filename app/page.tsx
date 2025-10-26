@@ -12,7 +12,7 @@ import { InteractionService } from '@/lib/services/interactionService';
 import { VoiceService } from '@/lib/services/voiceService';
 import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
-import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle } from 'lucide-react';
+import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle, Loader2 } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -346,16 +346,20 @@ export default function Home() {
                 }`}
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
-              {/* Processing animation for dictation */}
-              {isDictating && dictationTranscript && (
+              {/* Processing animation for dictation OR loading state */}
+              {(isDictating && dictationTranscript) || isLoading ? (
                 <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                  <div className="flex space-x-1">
-                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse"></div>
-                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 text-primary-500 animate-spin" />
+                  ) : (
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse"></div>
+                      <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  )}
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Bottom Bar with Agents and Interaction Modes/Submit */}
@@ -477,10 +481,14 @@ export default function Home() {
                     console.log('Interaction mode:', interactionMode);
                     // The form onSubmit will handle the actual submission
                   }}
-                  className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                  title="Send message"
+                  className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center gap-1"
+                  title={isLoading ? "Sending..." : "Send message"}
                 >
-                  <Send className="w-2.5 h-2.5" />
+                  {isLoading ? (
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  ) : (
+                    <Send className="w-2.5 h-2.5" />
+                  )}
                 </button>
               </div>
             </div>
