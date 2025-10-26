@@ -22,6 +22,7 @@ During this delay, users think the request wasn't submitted, leading to confusio
 3. **Coins refresh happening synchronously** after API response
 4. **Session storage write blocking** navigation
 5. **No optimistic UI updates**
+6. **🔴 UNUSED CODE FILES** - Legacy speech recognition files may be causing extra network activity
 
 ---
 
@@ -43,6 +44,25 @@ form onSubmit {
 ```
 
 **Total Blocking Time**: ~2000ms (API response) + ~50ms (processing) + ~100ms (navigation) = **~2150ms**
+
+#### 0. **UNUSED CODE FILES** (🔴 CRITICAL - Potential Network Waste)
+**Location**: `lib/hooks/useSpeechRecognition.ts`, `components/ui/Dictaphone.tsx`, `lib/utils/browserSupport.ts`
+
+**Problem**: 
+- These files contain old speech recognition implementations
+- They're NOT used in `app/page.tsx` anymore (we use Deepgram instead)
+- However, they may still be bundled into the build
+- Could be importing dependencies or making unnecessary network calls
+- These files reference `SpeechRecognition` API which could trigger browser APIs
+
+**Files to Remove**:
+1. `lib/hooks/useSpeechRecognition.ts` - Unused Web Speech API hook
+2. `components/ui/Dictaphone.tsx` - Unused Dictaphone component  
+3. `lib/utils/browserSupport.ts` - Unused browser support checker
+
+**Impact**: Unknown - could be causing hidden network requests or extra bundle size
+
+---
 
 ### Performance Bottlenecks
 
@@ -121,6 +141,25 @@ router.push(`/chat/${conversationId}`);
 ---
 
 ## ✅ Optimization Strategy
+
+### Phase 0: Remove Unused Files (5 minutes - High Impact)
+
+**Goal**: Eliminate legacy code that may cause unnecessary network activity
+
+#### 0.1 Remove Unused Speech Recognition Files
+```bash
+# Remove files:
+rm lib/hooks/useSpeechRecognition.ts
+rm components/ui/Dictaphone.tsx
+rm lib/utils/browserSupport.ts
+```
+
+**Expected Impact**: 
+- **Cleaner Build**: Remove unused dependencies
+- **Smaller Bundle Size**: Less JavaScript to load
+- **No Hidden Network Calls**: Eliminate potential legacy API calls
+
+---
 
 ### Phase 1: Immediate UI Feedback (5 minutes - High Impact)
 
@@ -265,6 +304,7 @@ sessionStorage.setItem(`chat-${conversationId}`, JSON.stringify(realMessages));
 
 | Priority | Task | Estimated Time | Impact | Difficulty |
 |----------|------|----------------|--------|------------|
+| 🔴 P0 | **Remove Unused Files** | 5 min | ⭐⭐⭐⭐⭐ | Easy |
 | 🔴 P0 | Add Loading Spinner | 5 min | ⭐⭐⭐⭐⭐ | Easy |
 | 🔴 P0 | Disable Input During Submit | 2 min | ⭐⭐⭐⭐⭐ | Easy |
 | 🟡 P1 | Move Coins Update Non-Blocking | 10 min | ⭐⭐⭐ | Medium |
