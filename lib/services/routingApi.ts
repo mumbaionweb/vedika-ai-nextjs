@@ -40,12 +40,13 @@ class RoutingApiService {
 
   /**
    * Get list of available models
+   * Uses Next.js API route to fetch server-side (no CORS issues)
    */
   async getAvailableModels(): Promise<Model[]> {
     try {
-      const url = `${this.baseUrl}/routing/models`;
-      console.log('🔍 Fetching models from:', url);
-      console.log('🔧 Base URL:', this.baseUrl);
+      // Use Next.js API route instead of direct fetch
+      const url = '/api/models';
+      console.log('🔍 Fetching models from Next.js API route:', url);
       
       // Create timeout abort controller
       const controller = new AbortController();
@@ -64,33 +65,23 @@ class RoutingApiService {
       console.log('📡 Response status:', response.status);
       
       if (!response.ok) {
-        // If endpoint doesn't exist yet (404), return empty array
-        if (response.status === 404) {
-          console.warn('⚠️ Models endpoint not found (404). Using default "Best" option only.');
-          return [];
-        }
-        const errorText = await response.text();
-        console.error('❌ API Error:', errorText);
+        console.error('❌ API Route Error:', response.statusText);
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }
       
       const data: ModelListResponse = await response.json();
       console.log('✅ Models data received:', data);
       console.log('📦 Number of models:', data.models?.length || 0);
-      return data.models;
+      return data.models || [];
     } catch (error) {
       console.error('❌ Error fetching models:', error);
       if (error instanceof Error) {
         console.error('Error type:', error.constructor.name);
         console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
         
         // Check for specific error types
         if (error.name === 'AbortError') {
           console.error('⏱️ Request timed out after 10 seconds');
-        } else if (error.message.includes('Failed to fetch')) {
-          console.error('🌐 Network error - check if backend is running');
-          console.error('💡 Trying API URL:', this.baseUrl);
         }
       }
       // Return empty array so UI still shows "Best" option
