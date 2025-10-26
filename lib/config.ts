@@ -6,8 +6,11 @@
 
 export const config = {
   api: {
-    // Production API endpoint
-    baseUrl: 'https://api.vedika.ai.in',
+    // API endpoints by environment
+    // Production: https://api.vedika.ai.in
+    // Preprod: https://preprod.api.vedika.ai.in
+    // UAT: https://uat.api.vedika.ai.in
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.vedika.ai.in',
     websocketUrl: 'wss://wa33d8dcw2.execute-api.ap-south-1.amazonaws.com/prod',
     timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000'),
   },

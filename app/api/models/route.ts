@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 
-// Use the environment variable first, then fallback
+// Environment-specific API endpoints
+// Production: https://api.vedika.ai.in
+// Preprod: https://preprod.api.vedika.ai.in
+// UAT: https://uat.api.vedika.ai.in
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.vedika.ai.in';
 
 export async function GET() {
