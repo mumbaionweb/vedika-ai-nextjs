@@ -45,13 +45,21 @@ class RoutingApiService {
     try {
       const url = `${this.baseUrl}/routing/models`;
       console.log('🔍 Fetching models from:', url);
+      console.log('🔧 Base URL:', this.baseUrl);
+      
+      // Create timeout abort controller
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       console.log('📡 Response status:', response.status);
       
@@ -73,7 +81,17 @@ class RoutingApiService {
     } catch (error) {
       console.error('❌ Error fetching models:', error);
       if (error instanceof Error) {
-        console.error('Error details:', error.message, error.stack);
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        // Check for specific error types
+        if (error.name === 'AbortError') {
+          console.error('⏱️ Request timed out after 10 seconds');
+        } else if (error.message.includes('Failed to fetch')) {
+          console.error('🌐 Network error - check if backend is running');
+          console.error('💡 Trying API URL:', this.baseUrl);
+        }
       }
       // Return empty array so UI still shows "Best" option
       return [];
