@@ -609,53 +609,59 @@ export default function Home() {
       />
       
       {/* Model Dropdown Portal - rendered outside overflow container */}
-      {typeof document !== 'undefined' && showModelDropdown && buttonRef.current && 
-        createPortal(
-          <>
-            {/* Backdrop overlay */}
-            <div className="fixed inset-0 z-[9998]" onClick={() => setShowModelDropdown(false)} />
-            
-            {/* Dropdown menu - positioned below button */}
-            <div 
-              className="fixed w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2 z-[9999]" 
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                top: buttonRef.current.getBoundingClientRect().bottom + 8,
-                left: buttonRef.current.getBoundingClientRect().left
-              }}
-            >
-              {models.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedModel(model.id);
-                    setShowModelDropdown(false);
-                  }}
-                  className={`w-full text-left px-4 py-2 hover:bg-secondary-50 transition-all ${
-                    selectedModel === model.id ? 'bg-primary-50' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className={`font-medium text-sm ${
-                        selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
-                      }`}>
-                        {model.label}
+      {typeof document !== 'undefined' && showModelDropdown && buttonRef.current && (() => {
+        try {
+          const rect = buttonRef.current.getBoundingClientRect();
+          return createPortal(
+            <>
+              {/* Backdrop overlay */}
+              <div className="fixed inset-0 z-[9998]" onClick={() => setShowModelDropdown(false)} />
+              
+              {/* Dropdown menu - positioned below button */}
+              <div 
+                className="fixed w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2 z-[9999]" 
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  top: rect.bottom + 8,
+                  left: rect.left
+                }}
+              >
+                {models.map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedModel(model.id);
+                      setShowModelDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 hover:bg-secondary-50 transition-all ${
+                      selectedModel === model.id ? 'bg-primary-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className={`font-medium text-sm ${
+                          selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
+                        }`}>
+                          {model.label}
+                        </div>
+                        <div className="text-xs text-secondary-500">{model.description}</div>
                       </div>
-                      <div className="text-xs text-secondary-500">{model.description}</div>
+                      {selectedModel === model.id && (
+                        <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                      )}
                     </div>
-                    {selectedModel === model.id && (
-                      <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </>,
-          document.body
-        )
-      }
+                  </button>
+                ))}
+              </div>
+            </>,
+            document.body
+          );
+        } catch (error) {
+          console.error('Error rendering dropdown:', error);
+          return null;
+        }
+      })()}
     </div>
   );
 }
