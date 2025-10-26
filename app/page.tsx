@@ -13,6 +13,7 @@ import { VoiceService } from '@/lib/services/voiceService';
 import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle, Loader2, Globe, Paperclip, Bot, ChevronDown, ChevronUp } from 'lucide-react';
+import { routingApi, type Model } from '@/lib/services/routingApi';
 
 export default function Home() {
   const router = useRouter();
@@ -25,6 +26,8 @@ export default function Home() {
   // Model selection state
   const [selectedModel, setSelectedModel] = useState('best');
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [availableModels, setAvailableModels] = useState<Model[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
   
   // Sources state
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
