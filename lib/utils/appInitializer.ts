@@ -5,12 +5,10 @@
 
 import { sessionManager } from './sessionManager';
 import { coinsStore } from '../stores/coinsStore';
-import { checkBrowserSupport } from './browserSupport';
 
 interface InitializationResult {
   sessionId: string;
   remainingCredits: number;
-  browserSupport: any;
 }
 
 class AppInitializer {
@@ -33,7 +31,6 @@ class AppInitializer {
         return {
           sessionId: cachedSession.session_id,
           remainingCredits: cachedSession.credits_remaining,
-          browserSupport: null, // Already checked
         };
       }
     }
@@ -53,13 +50,10 @@ class AppInitializer {
   private async _performInitialization(): Promise<InitializationResult> {
     console.log('🚀 [AppInitializer] Starting app initialization...');
     
-    // 1. Check browser capabilities (once only)
-    const browserSupport = checkBrowserSupport();
-    
-    // 2. Initialize session (this will also initialize coins store)
+    // 1. Initialize session (this will also initialize coins store)
     const session = await sessionManager.getSession();
     
-    // 3. Ensure coins store is ready (will use cached session data)
+    // 2. Ensure coins store is ready (will use cached session data)
     await coinsStore.fetchCoins();
     
     console.log('✅ [AppInitializer] App initialization complete');
@@ -67,7 +61,6 @@ class AppInitializer {
     return {
       sessionId: session.session_id,
       remainingCredits: session.credits_remaining,
-      browserSupport,
     };
   }
 
