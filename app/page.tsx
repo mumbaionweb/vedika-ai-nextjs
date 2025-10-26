@@ -12,7 +12,7 @@ import { InteractionService } from '@/lib/services/interactionService';
 import { VoiceService } from '@/lib/services/voiceService';
 import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
-import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle, Loader2 } from 'lucide-react';
+import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle, Loader2, Globe, Paperclip, Bot, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -21,6 +21,15 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Model selection state
+  const [selectedModel, setSelectedModel] = useState('best');
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  
+  // Sources state
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  
+  // Interaction Mode State
   
   // Interaction Mode State
   const [interactionMode, setInteractionMode] = useState<'type' | 'dictation' | 'voice'>('type');
@@ -84,6 +93,18 @@ export default function Home() {
     { id: 'search', icon: Search, label: 'Search' },
     { id: 'research', icon: FileText, label: 'Research' },
     { id: 'agents', icon: Sparkles, label: 'Agents' },
+  ];
+
+  const models = [
+    { id: 'best', label: 'Best', description: 'Best overall performance' },
+    { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet', description: 'Balanced performance' },
+    { id: 'gpt-4', label: 'GPT-4', description: 'High accuracy' },
+    { id: 'claude-3-haiku', label: 'Claude 3 Haiku', description: 'Fast and efficient' },
+  ];
+
+  const sources = [
+    { id: 'web', icon: Globe, label: 'Web', description: 'Search the web' },
+    { id: 'attach', icon: Paperclip, label: 'Attach', description: 'Upload files' },
   ];
 
   const interactionModes = [
@@ -362,35 +383,123 @@ export default function Home() {
               ) : null}
             </div>
 
-            {/* Bottom Bar with Agents and Interaction Modes/Submit */}
+            {/* Bottom Bar with Sources, Agents, Model, Interaction Modes and Submit */}
             <div className="flex items-center justify-between px-6 py-4 bg-stone-50 border-t border-primary-200">
-              {/* Agent Selection */}
-              <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
-                {agents.map((agent) => {
-                  const Icon = agent.icon;
-                  const isSelected = selectedAgent === agent.id;
-                  
-                  return (
-                    <button
-                      key={agent.id}
-                      type="button"
-                      onClick={() => setSelectedAgent(agent.id)}
-                      className={`p-1.5 rounded-md transition-all ${
-                        isSelected
-                          ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
-                          : 'bg-white text-secondary-600 hover:bg-secondary-100'
-                      }`}
-                      title={agent.label}
-                      disabled={isLoading}
-                    >
-                      <Icon className="w-2.5 h-2.5" />
-                    </button>
-                  );
-                })}
+              {/* Left Side: Sources and Agents */}
+              <div className="flex items-center gap-2">
+                {/* Sources */}
+                <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
+                  {sources.map((source) => {
+                    const Icon = source.icon;
+                    const isSelected = selectedSources.includes(source.id);
+                    
+                    return (
+                      <button
+                        key={source.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSources(prev => 
+                            prev.includes(source.id) 
+                              ? prev.filter(id => id !== source.id)
+                              : [...prev, source.id]
+                          );
+                        }}
+                        className={`p-1.5 rounded-md transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
+                            : 'bg-white text-secondary-600 hover:bg-secondary-100'
+                        }`}
+                        title={source.label}
+                        disabled={isLoading}
+                      >
+                        <Icon className="w-2.5 h-2.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Agent Selection */}
+                <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
+                  {agents.map((agent) => {
+                    const Icon = agent.icon;
+                    const isSelected = selectedAgent === agent.id;
+                    
+                    return (
+                      <button
+                        key={agent.id}
+                        type="button"
+                        onClick={() => setSelectedAgent(agent.id)}
+                        className={`p-1.5 rounded-md transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
+                            : 'bg-white text-secondary-600 hover:bg-secondary-100'
+                        }`}
+                        title={agent.label}
+                        disabled={isLoading}
+                      >
+                        <Icon className="w-2.5 h-2.5" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Right Side: Interaction Modes and Submit Button */}
+              {/* Right Side: Model, Interaction Modes and Submit Button */}
               <div className="flex items-center gap-2">
+                {/* Model Selection Button */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowModelDropdown(!showModelDropdown)}
+                    className="flex items-center gap-1 p-1.5 bg-white border border-secondary-200 rounded-lg hover:bg-secondary-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Select AI Model"
+                    disabled={isLoading}
+                  >
+                    <Bot className="w-2.5 h-2.5 text-secondary-600" />
+                    <span className="text-xs text-secondary-600 font-medium">
+                      {models.find(m => m.id === selectedModel)?.label || 'Best'}
+                    </span>
+                    {showModelDropdown ? (
+                      <ChevronUp className="w-2.5 h-2.5 text-secondary-600" />
+                    ) : (
+                      <ChevronDown className="w-2.5 h-2.5 text-secondary-600" />
+                    )}
+                  </button>
+
+                  {/* Model Dropdown */}
+                  {showModelDropdown && (
+                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-white border border-secondary-200 rounded-lg shadow-lg py-2 z-50">
+                      {models.map((model) => (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedModel(model.id);
+                            setShowModelDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-secondary-50 transition-all ${
+                            selectedModel === model.id ? 'bg-primary-50' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className={`font-medium text-sm ${
+                                selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
+                              }`}>
+                                {model.label}
+                              </div>
+                              <div className="text-xs text-secondary-500">{model.description}</div>
+                            </div>
+                            {selectedModel === model.id && (
+                              <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Interaction Mode Buttons */}
                 <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
                   {interactionModes.map((mode) => {
@@ -406,41 +515,32 @@ export default function Home() {
                           e.preventDefault();
                           e.stopPropagation();
                           console.log('🔘 Interaction mode button clicked:', mode.id);
-                          console.log('🔘 Button element:', e.currentTarget);
-                          console.log('🔘 Event type:', e.type);
                           
                           if (mode.id === 'dictation') {
                             console.log('🎤 Dictation button clicked, isDictating:', isDictating);
                             if (isDictating) {
-                              // Stop dictation
                               handleDictationStop();
                               handleInteractionModeChange('type');
                             } else {
-                              // Stop voice mode if active
                               if (isVoiceMode) {
                                 handleVoiceStop();
                               }
-                              // Start dictation
                               handleDictationStart();
                               setInteractionMode('dictation');
                             }
                           } else if (mode.id === 'voice') {
                             console.log('🎙️ Voice button clicked, isVoiceMode:', isVoiceMode);
                             if (isVoiceMode) {
-                              // Stop voice mode
                               handleVoiceStop();
                               handleInteractionModeChange('type');
                             } else {
-                              // Stop dictation if active
                               if (isDictating) {
                                 handleDictationStop();
                               }
-                              // Start voice mode
                               handleVoiceStart();
                               setInteractionMode('voice');
                             }
                           } else {
-                            // Type mode - stop any active modes
                             if (isDictating) {
                               handleDictationStop();
                             }
@@ -479,7 +579,6 @@ export default function Home() {
                     console.log('Button disabled state:', isLoading || !inputValue?.trim() || !sessionReady);
                     console.log('Input value when clicked:', inputValue);
                     console.log('Interaction mode:', interactionMode);
-                    // The form onSubmit will handle the actual submission
                   }}
                   className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center gap-1"
                   title={isLoading ? "Sending..." : "Send message"}
@@ -492,7 +591,6 @@ export default function Home() {
                 </button>
               </div>
             </div>
-          </div>
 
           {/* Error Display */}
           {error && (
@@ -533,6 +631,7 @@ export default function Home() {
             </button>
           </div>
           */}
+          </div>
         </form>
 
       </div>
