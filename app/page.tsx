@@ -637,17 +637,22 @@ export default function Home() {
       {typeof document !== 'undefined' && showModelDropdown && buttonRef.current && (() => {
         try {
           const rect = buttonRef.current.getBoundingClientRect();
+          const dropdownHeight = 250; // Approximate height of dropdown
+          const spaceBelow = window.innerHeight - rect.bottom;
+          const spaceAbove = rect.top;
+          const shouldShowAbove = spaceBelow < dropdownHeight && spaceAbove > dropdownHeight;
+          
           return createPortal(
             <>
               {/* Backdrop overlay */}
               <div className="fixed inset-0 z-[9998]" onClick={() => setShowModelDropdown(false)} />
               
-              {/* Dropdown menu - positioned below button */}
+              {/* Dropdown menu - positioned above or below button based on available space */}
               <div 
                 className="fixed w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2 z-[9999]" 
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                  top: rect.bottom + 8,
+                  [shouldShowAbove ? 'bottom' : 'top']: shouldShowAbove ? `${window.innerHeight - rect.top + 8}px` : `${rect.bottom + 8}px`,
                   left: rect.left
                 }}
               >
