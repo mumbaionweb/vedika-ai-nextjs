@@ -450,10 +450,11 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    className="p-1.5 bg-white border border-secondary-200 rounded-lg hover:bg-secondary-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1.5 bg-white border border-secondary-200 rounded-lg hover:bg-secondary-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                     title={`AI Model: ${models.find(m => m.id === selectedModel)?.label || 'Best'}`}
                     disabled={isLoading}
                   >
+                    <Bot className="w-2.5 h-2.5 text-secondary-600" />
                     {showModelDropdown ? (
                       <ChevronUp className="w-2.5 h-2.5 text-secondary-600" />
                     ) : (
@@ -463,7 +464,7 @@ export default function Home() {
 
                   {/* Model Dropdown */}
                   {showModelDropdown && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-secondary-200 rounded-lg shadow-lg py-2 z-50">
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-secondary-200 rounded-lg shadow-lg py-2 z-[9999]">
                       {models.map((model) => (
                         <button
                           key={model.id}
@@ -575,7 +576,7 @@ export default function Home() {
                     console.log('Input value when clicked:', inputValue);
                     console.log('Interaction mode:', interactionMode);
                   }}
-                  className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center gap-1"
+                  className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
                   title={isLoading ? "Sending..." : "Send message"}
                 >
                   {isLoading ? (
