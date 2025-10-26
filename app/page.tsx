@@ -29,7 +29,6 @@ export default function Home() {
   // Sources state
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   
-  // Interaction Mode State
   
   // Interaction Mode State
   const [interactionMode, setInteractionMode] = useState<'type' | 'dictation' | 'voice'>('type');
