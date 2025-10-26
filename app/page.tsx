@@ -285,8 +285,8 @@ export default function Home() {
               console.log('🔍 Device ID:', DeviceManager.getDeviceId());
               console.log('🔍 Session ID:', DeviceManager.getSessionId());
               
-              // Make API call to Vedika API
-              const response = await fetch(`${config.api.baseUrl}/ai/chat`, {
+              // Make API call through Next.js API route (server-side, no CORS issues)
+              const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -296,7 +296,7 @@ export default function Home() {
                   device_id: DeviceManager.getDeviceId(),
                   session_id: sessionManager.getCachedSession()?.session_id || DeviceManager.getSessionId(),
                   request_type: 'anonymous',
-                  model_id: 'best',
+                  model_id: selectedModel || 'best',
                   query_type: selectedAgent === 'search' ? 'general' : selectedAgent === 'research' ? 'analytical' : 'technical',
                   interaction_mode: interactionMode,
                 }),
