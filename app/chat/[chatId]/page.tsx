@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, use, useState } from 'react';
+import React, { useEffect, useRef, use, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { apiService } from '@/lib/services/api';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { appInitializer } from '@/lib/utils/appInitializer';
@@ -11,7 +12,8 @@ import { VoiceService } from '@/lib/services/voiceService';
 import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import type { Message } from '@/lib/types/api';
-import { Send, Search, FileText, Sparkles, Type, Mic, MessageCircle } from 'lucide-react';
+import { Send, Search, FileText, Sparkles, Type, Mic, MessageCircle, Loader, Globe, Paperclip, Bot } from 'lucide-react';
+import { routingApi, type Model } from '@/lib/services/routingApi';
 
 interface ChatPageProps {
   params: Promise<{
@@ -23,6 +25,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = use(params);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasLoadedHistoryRef = useRef(false);
+  const buttonRef = useRef<HTMLDivElement>(null);
 
   // Session state
   const [sessionReady, setSessionReady] = useState(false);
@@ -33,6 +36,15 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState('search');
+  
+  // Model selection state
+  const [selectedModel, setSelectedModel] = useState('best');
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [availableModels, setAvailableModels] = useState<Model[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  
+  // Sources state
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
   
   // Interaction Mode State
   const [interactionMode, setInteractionMode] = useState<'type' | 'dictation' | 'voice'>('type');
@@ -56,6 +68,20 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     { id: 'search', label: 'Search', icon: Search },
     { id: 'research', label: 'Research', icon: FileText },
     { id: 'agents', label: 'Agents', icon: Sparkles },
+  ];
+
+  // Combine "Best" default option with API models
+  const models = React.useMemo(() => {
+    const bestOption = { id: 'best', name: 'Best', description: 'Best overall performance (Auto-select)', speed: 'Automatic', cost: 'Variable', best_for: 'All use cases' };
+    if (availableModels.length === 0) {
+      return [bestOption];
+    }
+    return [bestOption, ...availableModels];
+  }, [availableModels]);
+
+  const sources = [
+    { id: 'web', icon: Globe, label: 'Web', description: 'Search the web' },
+    { id: 'attach', icon: Paperclip, label: 'Attach', description: 'Upload files' },
   ];
 
   const interactionModes = [
@@ -88,6 +114,28 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
     initSession();
   }, []);
+
+  // Load available models from API
+  useEffect(() => {
+    const loadModels = async () => {
+      if (!sessionReady) return;
+      
+      try {
+        setLoadingModels(true);
+        console.log('🔄 [CHAT PAGE] Loading models from API...');
+        const models = await routingApi.getAvailableModels();
+        console.log('✅ [CHAT PAGE] Loaded models from API:', models);
+        setAvailableModels(models);
+      } catch (error) {
+        console.warn('⚠️ [CHAT PAGE] Failed to load models from API (this is normal if backend is not running):', error);
+        setAvailableModels([]);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    loadModels();
+  }, [sessionReady]);
 
   // Handle speech recognition transcript updates
   useEffect(() => {
@@ -133,8 +181,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     try {
       console.log('📤 [CHAT PAGE] Submitting message:', userMessage);
       
-      // Make API call to Vedika API
-      const response = await fetch(`${config.api.baseUrl}/ai/chat`, {
+      // Make API call through Next.js API route (server-side, no CORS issues)
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,10 +190,10 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         body: JSON.stringify({
           message: userMessage,
           device_id: DeviceManager.getDeviceId(),
-          session_id: DeviceManager.getSessionId(),
+          session_id: sessionManager.getCachedSession()?.session_id || DeviceManager.getSessionId(),
           conversation_id: chatId,
           request_type: 'anonymous',
-          model_id: 'best',
+          model_id: selectedModel || 'best',
           query_type: selectedAgent === 'search' ? 'general' : selectedAgent === 'research' ? 'analytical' : 'technical',
           interaction_mode: interactionMode,
         }),
@@ -474,7 +522,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       {/* Input Form at Bottom */}
       <div className="bg-white p-4">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-          <div className="bg-stone-50 rounded-2xl shadow-2xl border-2 border-primary-300 overflow-hidden">
+          <div className="bg-stone-50 rounded-2xl shadow-2xl border-2 border-primary-300 overflow-visible">
             {/* Input Area */}
             <div className="relative">
               <input
@@ -493,47 +541,97 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                 }`}
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
-              {/* Processing animation for dictation */}
-              {isDictating && dictationTranscript && (
+              {/* Processing animation for dictation and loading */}
+              {(isDictating && dictationTranscript) || isLoading ? (
                 <div className="absolute right-6 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                  <div className="flex space-x-1">
-                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse"></div>
-                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
+                  {isLoading ? (
+                    <Loader className="w-5 h-5 text-primary-500 animate-spin" />
+                  ) : (
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse"></div>
+                      <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-1 h-4 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  )}
                 </div>
-              )}
+              ) : null}
             </div>
 
-            {/* Bottom Bar with Agents and Submit */}
+            {/* Bottom Bar with Sources, Agents, Model, Interaction Modes and Submit */}
             <div className="flex items-center justify-between px-6 py-4 bg-stone-50 border-t border-primary-200">
-              {/* Agent Selection */}
-              <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
-                {agents.map((agent) => {
-                  const Icon = agent.icon;
-                  const isSelected = selectedAgent === agent.id;
-                  
-                  return (
-                    <button
-                      key={agent.id}
-                      type="button"
-                      onClick={() => setSelectedAgent(agent.id)}
-                      className={`p-1.5 rounded-md transition-all ${
-                        isSelected
-                          ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
-                          : 'bg-white text-secondary-600 hover:bg-secondary-100'
-                      }`}
-                      title={agent.label}
-                      disabled={isLoading}
-                    >
-                      <Icon className="w-2.5 h-2.5" />
-                    </button>
-                  );
-                })}
+              {/* Left Side: Sources and Agents */}
+              <div className="flex items-center gap-2">
+                {/* Sources */}
+                <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
+                  {sources.map((source) => {
+                    const Icon = source.icon;
+                    const isSelected = selectedSources.includes(source.id);
+                    
+                    return (
+                      <button
+                        key={source.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSources(prev => 
+                            prev.includes(source.id) 
+                              ? prev.filter(id => id !== source.id)
+                              : [...prev, source.id]
+                          );
+                        }}
+                        className={`p-1.5 rounded-md transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
+                            : 'bg-white text-secondary-600 hover:bg-secondary-100'
+                        }`}
+                        title={source.label}
+                        disabled={isLoading}
+                      >
+                        <Icon className="w-2.5 h-2.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Agent Selection */}
+                <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
+                  {agents.map((agent) => {
+                    const Icon = agent.icon;
+                    const isSelected = selectedAgent === agent.id;
+                    
+                    return (
+                      <button
+                        key={agent.id}
+                        type="button"
+                        onClick={() => setSelectedAgent(agent.id)}
+                        className={`p-1.5 rounded-md transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-md'
+                            : 'bg-white text-secondary-600 hover:bg-secondary-100'
+                        }`}
+                        title={agent.label}
+                        disabled={isLoading}
+                      >
+                        <Icon className="w-2.5 h-2.5" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Right Side: Interaction Modes and Submit Button */}
+              {/* Right Side: Model, Interaction Modes and Submit Button */}
               <div className="flex items-center gap-2">
+                {/* Model Selection Button */}
+                <div className="relative" ref={buttonRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModelDropdown(!showModelDropdown)}
+                    className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+                    title={`AI Model: ${models.find(m => m.id === selectedModel)?.name || 'Best'}`}
+                    disabled={isLoading}
+                  >
+                    <Bot className="w-2.5 h-2.5" />
+                  </button>
+                </div>
                 {/* Interaction Mode Buttons */}
                 <div className="flex items-center bg-secondary-50 rounded-lg p-1 border border-secondary-200">
                   {interactionModes.map((mode) => {
@@ -609,10 +707,14 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                 <button
                   type="submit"
                   disabled={!sessionReady || isLoading || !input?.trim()}
-                  className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                  title={!sessionReady ? 'Initializing session...' : 'Send message'}
+                  className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+                  title={isLoading ? "Sending..." : "Send message"}
                 >
-                  <Send className="w-2.5 h-2.5" />
+                  {isLoading ? (
+                    <Loader className="w-2.5 h-2.5 animate-spin" />
+                  ) : (
+                    <Send className="w-2.5 h-2.5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -628,6 +730,66 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         onToggleRecording={handleVoiceModeToggleRecording}
         onSettings={handleVoiceModeSettings}
       />
+      
+      {/* Model Dropdown Portal - rendered outside overflow container */}
+      {typeof document !== 'undefined' && showModelDropdown && buttonRef.current && (() => {
+        try {
+          const rect = buttonRef.current.getBoundingClientRect();
+          return createPortal(
+            <>
+              {/* Backdrop overlay */}
+              <div className="fixed inset-0 z-[9998]" onClick={() => setShowModelDropdown(false)} />
+              
+              {/* Dropdown menu - positioned below button */}
+              <div 
+                className="fixed w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2 z-[9999]" 
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  top: rect.bottom + 8,
+                  left: rect.left
+                }}
+              >
+                {models.map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedModel(model.id);
+                      setShowModelDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 hover:bg-secondary-50 transition-all ${
+                      selectedModel === model.id ? 'bg-primary-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className={`font-medium text-sm ${
+                          selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
+                        }`}>
+                          {model.name}
+                        </div>
+                        <div className="text-xs text-secondary-500">{model.description}</div>
+                        {model.speed && model.cost && (
+                          <div className="text-xs text-secondary-400 mt-1">
+                            {model.speed} • {model.cost}
+                          </div>
+                        )}
+                      </div>
+                      {selectedModel === model.id && (
+                        <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>,
+            document.body
+          );
+        } catch (error) {
+          console.error('Error rendering dropdown:', error);
+          return null;
+        }
+      })()}
     </div>
   );
 }
