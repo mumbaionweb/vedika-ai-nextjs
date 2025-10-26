@@ -34,8 +34,8 @@ class RoutingApiService {
   private baseUrl: string;
 
   constructor() {
-    // Use NEXT_PUBLIC_API_URL from environment or fallback to localhost
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002';
+    // Use NEXT_PUBLIC_API_BASE_URL from environment or fallback to production API
+    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.vedika.ai.in';
   }
 
   /**
@@ -43,8 +43,17 @@ class RoutingApiService {
    */
   async getAvailableModels(): Promise<Model[]> {
     try {
-      console.log('🔍 Fetching models from:', `${this.baseUrl}/routing/models`);
-      const response = await fetch(`${this.baseUrl}/routing/models`);
+      const url = `${this.baseUrl}/routing/models`;
+      console.log('🔍 Fetching models from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('📡 Response status:', response.status);
       
       if (!response.ok) {
         // If endpoint doesn't exist yet (404), return empty array
@@ -52,13 +61,20 @@ class RoutingApiService {
           console.warn('⚠️ Models endpoint not found (404). Using default "Best" option only.');
           return [];
         }
+        const errorText = await response.text();
+        console.error('❌ API Error:', errorText);
         throw new Error(`Failed to fetch models: ${response.statusText}`);
       }
       
       const data: ModelListResponse = await response.json();
+      console.log('✅ Models data received:', data);
+      console.log('📦 Number of models:', data.models?.length || 0);
       return data.models;
     } catch (error) {
-      console.error('Error fetching models:', error);
+      console.error('❌ Error fetching models:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message, error.stack);
+      }
       // Return empty array so UI still shows "Best" option
       return [];
     }
