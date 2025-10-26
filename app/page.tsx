@@ -460,7 +460,7 @@ export default function Home() {
                   {/* Model Dropdown - Overlay */}
                   {showModelDropdown && (
                     <div className="fixed top-0 left-0 right-0 bottom-0 z-[9999]" onClick={() => setShowModelDropdown(false)}>
-                      <div className="absolute bottom-20 left-4 w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="absolute bottom-20 right-4 w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2" onClick={(e) => e.stopPropagation()}>
                       {models.map((model) => (
                         <button
                           key={model.id}
