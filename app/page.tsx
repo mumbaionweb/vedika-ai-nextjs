@@ -460,39 +460,43 @@ export default function Home() {
                     <Bot className="w-2.5 h-2.5" />
                   </button>
 
-                  {/* Model Dropdown - Overlay */}
+                  {/* Model Dropdown - Positioned below button */}
                   {showModelDropdown && (
-                    <div className="fixed top-0 left-0 right-0 bottom-0 z-[9999]" onClick={() => setShowModelDropdown(false)}>
-                      <div className="absolute bottom-[72px] right-[224px] w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2" onClick={(e) => e.stopPropagation()}>
-                      {models.map((model) => (
-                        <button
-                          key={model.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedModel(model.id);
-                            setShowModelDropdown(false);
-                          }}
-                          className={`w-full text-left px-4 py-2 hover:bg-secondary-50 transition-all ${
-                            selectedModel === model.id ? 'bg-primary-50' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className={`font-medium text-sm ${
-                                selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
-                              }`}>
-                                {model.label}
+                    <>
+                      {/* Backdrop overlay */}
+                      <div className="fixed inset-0 z-[9998]" onClick={() => setShowModelDropdown(false)} />
+                      
+                      {/* Dropdown menu */}
+                      <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-secondary-200 rounded-lg shadow-xl py-2 z-[9999]" onClick={(e) => e.stopPropagation()}>
+                        {models.map((model) => (
+                          <button
+                            key={model.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedModel(model.id);
+                              setShowModelDropdown(false);
+                            }}
+                            className={`w-full text-left px-4 py-2 hover:bg-secondary-50 transition-all ${
+                              selectedModel === model.id ? 'bg-primary-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className={`font-medium text-sm ${
+                                  selectedModel === model.id ? 'text-primary-600' : 'text-secondary-900'
+                                }`}>
+                                  {model.label}
+                                </div>
+                                <div className="text-xs text-secondary-500">{model.description}</div>
                               </div>
-                              <div className="text-xs text-secondary-500">{model.description}</div>
+                              {selectedModel === model.id && (
+                                <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                              )}
                             </div>
-                            {selectedModel === model.id && (
-                              <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
-                            )}
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        ))}
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
 
