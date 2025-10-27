@@ -236,7 +236,7 @@ export default function ChatPage() {
                 });
 
                 // Update coins
-                coinsStore.setCoins(result.vedika_coins_remaining);
+                coinsStore.updateFromChatResponse(result.vedika_coins_remaining);
 
                 // Add user message to UI
                 setMessages(prev => [...prev, {
