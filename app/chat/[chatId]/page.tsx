@@ -248,6 +248,17 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         onStreamError: (error) => {
           console.error('❌ Stream error:', error);
           setIsStreaming(false);
+        },
+        
+        onCreditsInfo: (data) => {
+          console.log('🪙 Credits info:', data);
+          coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
+        },
+        
+        onCreditsExhausted: (data) => {
+          console.warn('⚠️ Credits exhausted:', data);
+          coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
+          // Could show a modal or notification here if needed
         }
       });
       
@@ -393,6 +404,16 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             console.error('❌ Stream error for follow-up:', error);
             setIsStreaming(false);
             setIsLoading(false); // ✅ Stop showing "Thinking..."
+          },
+          
+          onCreditsInfo: (data) => {
+            console.log('🪙 Credits info for follow-up:', data);
+            coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
+          },
+          
+          onCreditsExhausted: (data) => {
+            console.warn('⚠️ Credits exhausted for follow-up:', data);
+            coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
           }
         });
       }

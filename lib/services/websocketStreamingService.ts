@@ -11,6 +11,8 @@ interface StreamingCallbacks {
   onConnectionOpen?: () => void;
   onConnectionClose?: () => void;
   onConnectionError?: (error: Event) => void;
+  onCreditsInfo?: (data: CreditsInfoEvent) => void;
+  onCreditsExhausted?: (data: CreditsExhaustedEvent) => void;
 }
 
 interface StreamStartEvent {
@@ -45,6 +47,21 @@ interface StreamCompleteEvent {
 interface StreamErrorEvent {
   type: 'stream_error';
   error: string;
+}
+
+interface CreditsInfoEvent {
+  type: 'credits_info';
+  vedika_coins_remaining: number;
+  daily_credits: number;
+  message: string;
+}
+
+interface CreditsExhaustedEvent {
+  type: 'credits_exhausted';
+  vedika_coins_remaining: number;
+  daily_credits: number;
+  message: string;
+  action_required?: string;
 }
 
 export class WebSocketStreamingService {
@@ -145,11 +162,20 @@ export class WebSocketStreamingService {
         break;
 
       case 'credits_info':
-        console.log('🪙 [WebSocket] Credits info:', data);
+        console.log('🪙 [WebSocket] Credits info:', {
+          vedika_coins_remaining: data.vedika_coins_remaining,
+          daily_credits: data.daily_credits,
+          message: data.message
+        });
+        this.callbacks.onCreditsInfo?.(data as CreditsInfoEvent);
         break;
 
       case 'credits_exhausted':
-        console.warn('⚠️ [WebSocket] Credits exhausted');
+        console.warn('⚠️ [WebSocket] Credits exhausted:', {
+          vedika_coins_remaining: data.vedika_coins_remaining,
+          message: data.message
+        });
+        this.callbacks.onCreditsExhausted?.(data as CreditsExhaustedEvent);
         break;
 
       default:
