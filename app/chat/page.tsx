@@ -223,7 +223,7 @@ export default function ChatPage() {
               try {
                 setIsSubmitting(true);
                 const deviceId = DeviceManager.getDeviceId() ?? '';
-                const session = sessionManager.getSession();
+                const session = await sessionManager.getSession();
                 const sessionId = session?.sessionId ?? '';
 
                 // Start new conversation
