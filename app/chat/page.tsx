@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DeviceManager } from '@/lib/utils/deviceManager';
 import { sessionManager } from '@/lib/utils/sessionManager';
@@ -19,7 +19,7 @@ interface Message {
   isStreaming?: boolean;
 }
 
-export default function ChatPage() {
+function ChatContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const conversationId = searchParams.get('conversation_id');
@@ -292,6 +292,14 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <ChatContent />
+    </Suspense>
   );
 }
 
