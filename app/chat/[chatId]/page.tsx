@@ -14,6 +14,10 @@ import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import type { Message } from '@/lib/types/api';
 import { Send, Search, FileText, Sparkles, Type, Mic, MessageCircle, Loader, Globe, Paperclip, Bot } from 'lucide-react';
 import { routingApi, type Model } from '@/lib/services/routingApi';
+// Add WebSocket streaming imports
+import { WebSocketStreamingService } from '@/lib/services/websocketStreamingService';
+import { createWebSocketStreamRequest } from '@/lib/services/apiService';
+import { startChatConversation } from '@/lib/services/apiService';
 
 interface ChatPageProps {
   params: Promise<{
@@ -36,6 +40,12 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState('search');
+  
+  // WebSocket streaming state
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const wsServiceRef = useRef<WebSocketStreamingService | null>(null);
+  const isConnectingRef = useRef(false);
   
   // Model selection state
   const [selectedModel, setSelectedModel] = useState('best');
@@ -137,6 +147,143 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     loadModels();
   }, [sessionReady]);
 
+  // WebSocket streaming initialization - check for pending message from homepage
+  useEffect(() => {
+    if (!chatId || !sessionReady) return;
+    
+    // Check if there's a pending message (fresh navigation from homepage)
+    const pendingMessage = sessionStorage.getItem('pending_message');
+    
+    if (pendingMessage) {
+      console.log('🎬 [CHAT PAGE] Starting WebSocket streaming for pending message:', pendingMessage);
+      
+      // Clean up sessionStorage first to prevent duplication
+      sessionStorage.removeItem('pending_message');
+      sessionStorage.removeItem('pending_conversation_data');
+      
+      // Prevent double connection
+      if (isConnectingRef.current) return;
+      isConnectingRef.current = true;
+      
+      // Always add the user message since we filtered it out from loadHistory if it had no timestamp
+      setMessages(prev => {
+        // Check if this specific message already exists
+        const messageExists = prev.some(msg => 
+          msg.content === pendingMessage && 
+          msg.role === 'user' && 
+          msg.timestamp // Only check messages with timestamps
+        );
+        
+        if (messageExists) {
+          console.log('📝 [CHAT PAGE] User message already exists, skipping');
+          return prev;
+        }
+        
+        console.log('📝 [CHAT PAGE] Adding user message to conversation');
+        return [...prev, {
+          id: Date.now().toString(),
+          role: 'user',
+          content: pendingMessage,
+          timestamp: new Date().toISOString(),
+        }];
+      });
+      
+      // Initialize WebSocket service
+      const wsService = new WebSocketStreamingService(config.api.websocketUrl);
+      wsServiceRef.current = wsService;
+      
+      // Set up callbacks
+      wsService.setCallbacks({
+        onStreamStart: (event) => {
+          console.log('🎬 Stream started:', event);
+          const messageId = Date.now().toString();
+          setStreamingMessageId(messageId);
+          setMessages(prev => [...prev, {
+            id: messageId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date().toISOString(),
+          }]);
+          setIsStreaming(true);
+        },
+        
+        onContentChunk: (event) => {
+          console.log('📦 Chunk received:', event.content);
+          setMessages(prev => prev.map(msg => {
+            // Find the last assistant message with empty or minimal content (the streaming one)
+            const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().find(({ m }) => m.role === 'assistant');
+            if (lastAssistantIndex && msg.id === lastAssistantIndex.m.id) {
+              return { ...msg, content: msg.content + event.content };
+            }
+            return msg;
+          }));
+        },
+        
+        onStreamComplete: (event) => {
+          console.log('✅ Stream complete:', event);
+          setMessages(prev => prev.map((msg, idx) => {
+            // Find the last assistant message
+            const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().findIndex(({ m }) => m.role === 'assistant');
+            if (lastAssistantIndex !== -1 && idx === prev.length - 1 - lastAssistantIndex && msg.role === 'assistant') {
+              return { ...msg, content: event.full_response || msg.content };
+            }
+            return msg;
+          }));
+          setStreamingMessageId(null);
+          setIsStreaming(false);
+          
+          // Update coins if provided
+          if (event.credits?.remaining) {
+            coinsStore.updateFromChatResponse(event.credits.remaining);
+          }
+          
+          // Disconnect after a delay
+          setTimeout(() => {
+            if (wsServiceRef.current) {
+              wsServiceRef.current.disconnect();
+            }
+          }, 1000);
+        },
+        
+        onStreamError: (error) => {
+          console.error('❌ Stream error:', error);
+          setIsStreaming(false);
+        }
+      });
+      
+      // Connect and stream
+      const connectAndStream = async () => {
+        try {
+          await wsService.connect();
+          console.log('✅ WebSocket connected');
+          
+          const request = createWebSocketStreamRequest(
+            chatId,
+            pendingMessage,
+            DeviceManager.getSessionId() || '',
+            DeviceManager.getDeviceId() || '',
+            'anonymous'
+          );
+          
+          wsService.sendMessage(request);
+          console.log('📡 Streaming request sent for conversation:', chatId);
+        } catch (error) {
+          console.error('❌ Failed to connect WebSocket:', error);
+        }
+      };
+      
+      connectAndStream();
+      
+      // Cleanup
+      return () => {
+        if (wsServiceRef.current) {
+          wsServiceRef.current.disconnect();
+        }
+        isConnectingRef.current = false;
+      };
+    }
+  }, [chatId, sessionReady]);
+
   // Handle speech recognition transcript updates
   useEffect(() => {
     if (speechTranscript) {
@@ -159,10 +306,10 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     }
   };
 
-  // Manual form submission handler
+  // Manual form submission handler - Use WebSocket streaming
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isStreaming) return;
 
     const userMessage = input.trim();
     setInput('');
@@ -179,56 +326,97 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     setMessages(prev => [...prev, newUserMessage]);
 
     try {
-      console.log('📤 [CHAT PAGE] Submitting message:', userMessage);
+      console.log('📤 [CHAT PAGE] Submitting follow-up message via WebSocket:', userMessage);
       
-      // Make API call through Next.js API route (server-side, no CORS issues)
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          device_id: DeviceManager.getDeviceId(),
-          session_id: sessionManager.getCachedSession()?.session_id || DeviceManager.getSessionId(),
-          conversation_id: chatId,
-          request_type: 'anonymous',
-          model_id: selectedModel || 'best',
-          query_type: selectedAgent === 'search' ? 'general' : selectedAgent === 'research' ? 'analytical' : 'technical',
-          interaction_mode: interactionMode,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ [CHAT PAGE] Response received:', data);
+      // Use existing WebSocket connection or create new one
+      let wsService = wsServiceRef.current || null;
+      
+      if (!wsService || (wsService as any).ws?.readyState !== WebSocket.OPEN) {
+        console.log('🔌 Creating new WebSocket connection for follow-up message');
+        wsService = new WebSocketStreamingService(config.api.websocketUrl);
+        wsServiceRef.current = wsService;
         
-        // ✅ Update coins from chat response if available
-        if (data.vedika_coins && typeof data.vedika_coins.balance === 'number') {
-          console.log('🪙 [CHAT PAGE] Received vedika_coins from response:', data.vedika_coins);
-          coinsStore.updateFromChatResponse(data.vedika_coins.balance);
-        } else {
-          console.warn('⚠️ [CHAT PAGE] No vedika_coins in response, using session refresh as fallback');
-          coinsStore.refresh();
-        }
-        
-        // Add assistant response to chat
-        const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: data.response,
-          timestamp: new Date().toISOString(),
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-      } else {
-        const errorText = await response.text();
-        console.error('❌ [CHAT PAGE] Failed to send message:', response.status, errorText);
-        setError(`Failed to send message: ${response.status} - ${errorText}`);
+        // Set up callbacks for this connection
+        wsService.setCallbacks({
+          onStreamStart: (event) => {
+            console.log('🎬 Stream started for follow-up:', event);
+            const messageId = Date.now().toString();
+            setStreamingMessageId(messageId);
+            setMessages(prev => [...prev, {
+              id: messageId,
+              role: 'assistant',
+              content: '',
+              timestamp: new Date().toISOString(),
+            }]);
+            setIsStreaming(true);
+          },
+          
+          onContentChunk: (event) => {
+            console.log('📦 Chunk received for follow-up:', event.content);
+            setMessages(prev => prev.map(msg => {
+              // Find the last assistant message
+              const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().find(({ m }) => m.role === 'assistant');
+              if (lastAssistantIndex && msg.id === lastAssistantIndex.m.id) {
+                return { ...msg, content: msg.content + event.content };
+              }
+              return msg;
+            }));
+          },
+          
+          onStreamComplete: (event) => {
+            console.log('✅ Stream complete for follow-up:', event);
+            setMessages(prev => prev.map((msg, idx) => {
+              const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().findIndex(({ m }) => m.role === 'assistant');
+              if (lastAssistantIndex !== -1 && idx === prev.length - 1 - lastAssistantIndex && msg.role === 'assistant') {
+                return { ...msg, content: event.full_response || msg.content };
+              }
+              return msg;
+            }));
+            setStreamingMessageId(null);
+            setIsStreaming(false);
+            setIsLoading(false); // ✅ Stop showing "Thinking..."
+            
+            // Update coins if provided
+            if (event.credits?.remaining) {
+              coinsStore.updateFromChatResponse(event.credits.remaining);
+            }
+            
+            // Disconnect after a delay
+            setTimeout(() => {
+              if (wsServiceRef.current && wsServiceRef.current === wsService) {
+                wsServiceRef.current.disconnect();
+              }
+            }, 1000);
+          },
+          
+          onStreamError: (error) => {
+            console.error('❌ Stream error for follow-up:', error);
+            setIsStreaming(false);
+            setIsLoading(false); // ✅ Stop showing "Thinking..."
+          }
+        });
       }
+      
+      // Connect and send message
+      if ((wsService as any).ws?.readyState !== WebSocket.OPEN) {
+        await wsService.connect();
+        console.log('✅ WebSocket connected for follow-up message');
+      }
+      
+      const request = createWebSocketStreamRequest(
+        chatId,
+        userMessage,
+        DeviceManager.getSessionId() || '',
+        DeviceManager.getDeviceId() || '',
+        'anonymous'
+      );
+      
+      wsService.sendMessage(request);
+      console.log('📡 Follow-up message sent via WebSocket');
+      
     } catch (error) {
-      console.error('❌ [CHAT PAGE] Error sending message:', error);
+      console.error('❌ [CHAT PAGE] Error sending follow-up message:', error);
       setError(`Error sending message: ${error}`);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -240,6 +428,13 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
     async function loadHistory() {
       try {
+        // Skip loading history if there's a pending message (streaming will handle it)
+        const pendingMessage = sessionStorage.getItem('pending_message');
+        if (pendingMessage) {
+          console.log('⏭️ [CHAT PAGE] Skipping history load - pending message exists');
+          return;
+        }
+        
         // First check if we have initial messages in sessionStorage
         const cachedMessages = sessionStorage.getItem(`chat-${chatId}`);
         if (cachedMessages) {
@@ -270,12 +465,26 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         });
 
         // Convert backend messages to our format
-        const formattedMessages = (data.messages || []).map((msg: any) => ({
-          id: msg.message_id || `msg-${Date.now()}-${Math.random()}`,
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content,
-          timestamp: msg.timestamp,
-        }));
+        let formattedMessages = (data.messages || [])
+          .map((msg: any) => ({
+            id: msg.message_id || `msg-${Date.now()}-${Math.random()}`,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: msg.timestamp,
+          }))
+          .sort((a, b) => {
+            // Sort by timestamp to ensure correct order
+            const timeA = new Date(a.timestamp).getTime();
+            const timeB = new Date(b.timestamp).getTime();
+            return timeA - timeB;
+          });
+
+        // Filter out the first user message if it doesn't have a proper timestamp
+        // This happens when loading a conversation that was just created via streaming
+        if (formattedMessages.length > 0 && formattedMessages[0].role === 'user' && !formattedMessages[0].timestamp) {
+          console.log('⚠️ [CHAT PAGE] Filtering out first user message without timestamp');
+          formattedMessages = formattedMessages.slice(1);
+        }
 
         setMessages(formattedMessages);
         
@@ -480,6 +689,9 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                 }`}>
                   <p className="text-secondary-900 whitespace-pre-line">
                     {message.content}
+                    {isStreaming && message.role === 'assistant' && messages.indexOf(message) === messages.length - 1 && (
+                      <span className="inline-block w-2 h-4 bg-primary-600 animate-pulse ml-1">▋</span>
+                    )}
                   </p>
                   {message.timestamp && (
                     <p className="text-xs text-secondary-400 mt-2">

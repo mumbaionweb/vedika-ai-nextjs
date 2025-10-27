@@ -15,6 +15,8 @@ import { useDeepgramDictation } from '@/lib/services/deepgramDictationService';
 import VoiceModePopup from '@/components/ui/VoiceModePopup';
 import { Search, FileText, Sparkles, Send, Type, Mic, MessageCircle, Loader, Globe, Paperclip, Bot, ChevronDown, ChevronUp } from 'lucide-react';
 import { routingApi, type Model } from '@/lib/services/routingApi';
+import { WebSocketStreamingService } from '@/lib/services/websocketStreamingService';
+import { startChatConversation } from '@/lib/services/apiService';
 
 export default function Home() {
   const router = useRouter();
@@ -44,6 +46,9 @@ export default function Home() {
   const [interactionService] = useState(() => new InteractionService());
   const [voiceService] = useState(() => new VoiceService());
   
+  // WebSocket streaming service
+  const [wsService] = useState(() => new WebSocketStreamingService(config.api.websocketUrl));
+  
   // ✅ Use Deepgram dictation hook
   const {
     transcript: speechTranscript,
@@ -59,6 +64,27 @@ export default function Home() {
   useEffect(() => {
     initializeSession();
   }, []);
+
+  // Connect to WebSocket when session is ready
+  useEffect(() => {
+    if (!sessionReady) return;
+
+    const connectWebSocket = async () => {
+      try {
+        await wsService.connect();
+        console.log('✅ WebSocket connected on homepage');
+      } catch (error) {
+        console.error('❌ Failed to connect WebSocket on homepage:', error);
+      }
+    };
+
+    connectWebSocket();
+
+    // Cleanup on unmount
+    return () => {
+      wsService.disconnect();
+    };
+  }, [sessionReady, wsService]);
 
   // Load available models from API
   useEffect(() => {
@@ -285,76 +311,42 @@ export default function Home() {
               console.log('🔍 Device ID:', DeviceManager.getDeviceId());
               console.log('🔍 Session ID:', DeviceManager.getSessionId());
               
-              // Make API call through Next.js API route (server-side, no CORS issues)
-              const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  message: inputValue,
-                  device_id: DeviceManager.getDeviceId(),
-                  session_id: sessionManager.getCachedSession()?.session_id || DeviceManager.getSessionId(),
-                  request_type: 'anonymous',
-                  model_id: selectedModel || 'best',
-                  query_type: selectedAgent === 'search' ? 'general' : selectedAgent === 'research' ? 'analytical' : 'technical',
-                  interaction_mode: interactionMode,
-                }),
+              // 🚀 STEP 1: Call /ai/chat/start to get conversation_id immediately
+              const sessionId = sessionManager.getCachedSession()?.session_id || DeviceManager.getSessionId();
+              const deviceId = DeviceManager.getDeviceId();
+              
+              const result = await startChatConversation({
+                message: inputValue,
+                session_id: sessionId ?? '',
+                device_id: deviceId ?? undefined,
+                model_id: selectedModel || 'best',
+                request_type: 'anonymous',
+                interaction_mode: interactionMode as 'type' | 'dictation' | 'voice',
               });
 
-              console.log('📨 Response status:', response.status);
-              console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
-
-              if (response.ok) {
-                const data = await response.json();
-                console.log('✅ Response data:', data);
-                
-                const conversationId = response.headers.get('x-conversation-id') || data.conversation_id;
-                console.log('✅ Message sent, conversation ID:', conversationId);
-                
-                // ✅ Update coins from chat response if available
-                if (data.vedika_coins && typeof data.vedika_coins.balance === 'number') {
-                  console.log('🪙 Received vedika_coins from chat response:', data.vedika_coins);
-                  coinsStore.updateFromChatResponse(data.vedika_coins.balance);
-                } else {
-                  console.warn('⚠️ No vedika_coins in chat response, using session refresh as fallback');
-                  coinsStore.refresh();
-                }
-                
-                if (conversationId) {
-                  // Store initial messages for the chat page
-                  const initialMessages = [
-                    {
-                      id: `user-${Date.now()}`,
-                      role: 'user',
-                      content: inputValue,
-                      timestamp: new Date().toISOString(),
-                    },
-                    {
-                      id: `assistant-${Date.now()}-1`,
-                      role: 'assistant',
-                      content: data.response,
-                      timestamp: new Date().toISOString(),
-                    },
-                  ];
-                  sessionStorage.setItem(`chat-${conversationId}`, JSON.stringify(initialMessages));
-                  console.log('💾 Stored initial messages in sessionStorage');
-                  
-                  // Navigate to chat page
-                  console.log('🔄 Navigating to chat page:', `/chat/${conversationId}`);
-                  router.push(`/chat/${conversationId}`);
-                } else {
-                  console.log('⚠️ No conversation ID found in response');
-                  console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-                  console.log('Response data:', data);
-                }
-                
-                setInputValue(''); // Clear input after submit
-              } else {
-                const errorText = await response.text();
-                console.error('❌ Failed to send message:', response.status, errorText);
-                setError(`Failed to send message: ${response.status} - ${errorText}`);
-              }
+              console.log('✅ Conversation created:', result.conversation_id);
+              console.log('   Model selected:', result.model_name);
+              console.log('   Coins remaining:', result.vedika_coins_remaining);
+              console.log('   Coins used:', result.vedika_coins_used);
+              
+              // Update coins display
+              coinsStore.updateFromChatResponse(result.vedika_coins_remaining);
+              
+              // Store conversation info for chat page
+              sessionStorage.setItem('current_conversation_id', result.conversation_id);
+              sessionStorage.setItem('pending_message', inputValue);
+              sessionStorage.setItem('pending_conversation_data', JSON.stringify({
+                model: result.model,
+                model_name: result.model_name,
+                transaction_id: result.transaction_id,
+                routing: result.routing,
+              }));
+              
+              // Navigate to chat page with conversation_id
+              console.log('🔄 Navigating to chat page:', `/chat/${result.conversation_id}`);
+              router.push(`/chat/${result.conversation_id}`);
+              
+              setInputValue(''); // Clear input after submit
             } catch (error) {
               console.error('❌ Error sending message:', error);
               setError(`Error sending message: ${error}`);
