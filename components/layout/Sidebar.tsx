@@ -1,15 +1,14 @@
 'use client';
-
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import type { SidebarProps, User } from '@/types';
+import { usePathname, useRouter } from 'next/navigation';
 import { apiService } from '@/lib/services/api';
-import type { Conversation } from '@/lib/types/api';
-import { FileText, MessageSquare, PlusCircle } from 'lucide-react';
+import type { Conversation, SidebarProps, User } from '@/types';
 import VaiLogo from '../ui/VaiLogo';
+
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   
   // Mock user data - will be replaced with real authentication later
   const [user] = useState<User>({
@@ -145,18 +144,30 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`
-          bg-gradient-to-b from-secondary-800 to-secondary-900 
-          text-white fixed lg:relative inset-y-0 left-0 
-          transform transition-transform duration-300 ease-in-out z-10 
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-          lg:translate-x-0 lg:w-[4%] xl:w-[3%] flex flex-col
+          fixed lg:static
+          inset-y-0 left-0
+          z-50
+          w-64 lg:w-[3%]
+          min-w-[240px] lg:min-w-[70px]
+          bg-gradient-to-br from-primary-50 via-white to-primary-50
+          text-secondary-900
+          transform transition-transform duration-300 ease-in-out
+          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          flex flex-col
+          h-screen
         `}
       >
-        <div className="p-4 flex-shrink-0">
-          <VaiLogo />
-        </div>
-        <nav className="flex-1 overflow-y-auto px-2">
-          <button
+        {/* Top Section - Logo & New Chat */}
+        <div className="p-4">
+          {/* Logo */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="text-xl font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 text-transparent bg-clip-text drop-shadow-lg">
+              V.ai
+            </div>
+          </div>
+
+          {/* New Chat Button */}
+          <button 
             onClick={handleNewChat}
             className="w-7 h-7 mx-auto mt-16 flex items-center justify-center p-1 bg-white hover:bg-primary-50 rounded-lg transition-colors group shadow-sm border border-primary-200"
             aria-label="New Chat"
@@ -308,7 +319,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </div>
             )}
           </div>
-        </nav>
+        </div>
+
+        {/* Middle Section - Navigation/Chat History */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+          <div className="space-y-2">
+            {/* Chat history will go here */}
+          </div>
+        </div>
+
+        {/* Bottom Section - Profile */}
         <div className="p-4 border-t border-primary-300">
           <div className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white hover:shadow-sm transition-colors cursor-pointer border border-transparent hover:border-primary-200">
             {/* Avatar */}
