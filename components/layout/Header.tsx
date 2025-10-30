@@ -8,7 +8,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   return (
-    <header className="h-16 bg-white flex items-center px-4 lg:px-6 flex-shrink-0">
+    <header className="h-16 bg-white flex items-center px-4 lg:px-6 flex-shrink-0 relative z-20">
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
