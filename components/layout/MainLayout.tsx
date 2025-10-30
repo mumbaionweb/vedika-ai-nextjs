@@ -30,7 +30,7 @@ export default function MainLayout({ children }: LayoutProps) {
   }, []);
 
   return (
-    <div className="flex main-layout w-screen overflow-hidden">
+    <div className="flex h-screen main-layout w-screen overflow-hidden">
       {/* Sidebar - Desktop */}
       <div className="hidden lg:block lg:w-[4%] xl:w-[3%]">
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
