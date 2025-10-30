@@ -148,8 +148,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           fixed lg:static
           inset-y-0 left-0
           z-50
-          w-64 lg:w-[3%]
-          min-w-[240px] lg:min-w-[70px]
+          w-full lg:w-[3%]
+          min-w-[100vw] lg:min-w-[70px]
           bg-gradient-to-br from-primary-50 via-white to-primary-50
           text-secondary-900
           transform transition-transform duration-300 ease-in-out
@@ -158,10 +158,32 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           h-screen main-layout
         `}
       >
+        {/* Mobile Header with Close Button */}
+        <div className="lg:hidden p-4 flex justify-between items-center border-b border-primary-200">
+          <div className="text-xl font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 text-transparent bg-clip-text">
+            V.ai
+          </div>
+          <button onClick={onClose} className="p-2" aria-label="Close menu">
+            <svg
+              className="w-6 h-6 text-secondary-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        
         {/* Top Section - Logo & New Chat */}
         <div className="p-4">
-          {/* Logo */}
-          <div className="flex items-center justify-center mb-6">
+          {/* Logo - Desktop */}
+          <div className="hidden lg:flex items-center justify-center mb-6">
             <div className="text-xl font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 text-transparent bg-clip-text drop-shadow-lg">
               V.ai
             </div>
