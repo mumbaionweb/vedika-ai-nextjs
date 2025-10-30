@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { apiService } from '@/lib/services/api';
-import type { Conversation, SidebarProps, User } from '@/types';
+import type { Conversation } from '@/lib/types/api';
+import type { SidebarProps, User } from '@/types';
 import VaiLogo from '../ui/VaiLogo';
 
 
