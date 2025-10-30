@@ -47,3 +47,32 @@ body {
   scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d4af37;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #c8a432;
+}
+
+/* Mobile viewport height fix */
+@media screen and (max-width: 1024px) {
+  html, body {
+    /* Let the layout container control the height and overflow */
+    height: calc(var(--vh, 1vh) * 100);
+    overflow: hidden;
+  }
+  
+  .main-layout {
+    height: calc(var(--vh, 1vh) * 100);
+  }
+}
+

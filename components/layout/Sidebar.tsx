@@ -1,13 +1,15 @@
 'use client';
-
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import type { SidebarProps, User } from '@/types';
+import { usePathname, useRouter } from 'next/navigation';
 import { apiService } from '@/lib/services/api';
 import type { Conversation } from '@/lib/types/api';
+import type { SidebarProps, User } from '@/types';
+import VaiLogo from '../ui/VaiLogo';
+
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   
   // Mock user data - will be replaced with real authentication later
   const [user] = useState<User>({
