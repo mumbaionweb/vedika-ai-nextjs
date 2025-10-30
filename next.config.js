@@ -4,7 +4,7 @@ const nextConfig = {
   
   // Compiler optimizations
   compiler: {
-    removeConsole: false, // Temporarily enabled for debugging
+    removeConsole: false, // Temporarily enabled for UAT debugging
   },
   
   // Image optimization
