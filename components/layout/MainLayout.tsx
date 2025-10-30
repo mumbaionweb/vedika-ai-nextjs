@@ -7,10 +7,16 @@ import Header from './Header';
 import Footer from './Footer';
 import type { LayoutProps } from '@/types';
 
-export default function MainLayout({ children }: LayoutProps) {
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
+
   const isHomePage = pathname === '/';
+
+  const handleMenuClick = () => {
+    console.log('🍔 Burger menu clicked, toggling sidebar');
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   // Mobile viewport height fix
   useEffect(() => {
@@ -31,22 +37,15 @@ export default function MainLayout({ children }: LayoutProps) {
 
   return (
     <div className="flex h-screen main-layout w-screen overflow-hidden">
-      {/* Sidebar - Desktop */}
-      <div className="hidden lg:block lg:w-[4%] xl:w-[3%]">
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      </div>
+      {/* Unified Sidebar */}
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 h-full overflow-hidden">
-        {/* Header */}
-        <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+      <div className="flex-1 flex flex-col">
+        <Header onMenuClick={handleMenuClick} />
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar ${isHomePage ? 'bg-white' : 'bg-secondary-50'}`}>
           {children}
         </main>
-
-        {/* Footer - Removed (input now in chat page via useChat) */}
       </div>
     </div>
   );
