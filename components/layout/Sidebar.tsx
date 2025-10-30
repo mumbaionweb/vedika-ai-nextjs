@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { SidebarProps, User } from '@/types';
 import { apiService } from '@/lib/services/api';
 import type { Conversation } from '@/lib/types/api';
-import { useChatHistory } from '@/hooks/useChatHistory';
 import { FileText, MessageSquare, PlusCircle } from 'lucide-react';
 import VaiLogo from '../ui/VaiLogo';
 
