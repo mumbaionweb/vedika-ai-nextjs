@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -12,10 +12,29 @@ export default function MainLayout({ children }: LayoutProps) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
 
+  // Mobile viewport height fix
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    setVH();
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+
+    return () => {
+      window.removeEventListener('resize', setVH);
+      window.removeEventListener('orientationchange', setVH);
+    };
+  }, []);
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+    <div className="flex main-layout w-screen overflow-hidden">
+      {/* Sidebar - Desktop */}
+      <div className="hidden lg:block lg:w-[4%] xl:w-[3%]">
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      </div>
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 h-full overflow-hidden">
