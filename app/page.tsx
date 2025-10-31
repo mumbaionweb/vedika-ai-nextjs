@@ -283,7 +283,7 @@ export default function Home() {
 
   return (
     <div className="flex justify-center h-full bg-white pt-48 pb-8">
-      <div className="w-full max-w-3xl">
+      <div className="w-full max-w-3xl px-4">
         {/* Logo */}
         <div className="text-center mb-4">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 bg-clip-text text-transparent mb-2">
