@@ -355,7 +355,7 @@ export default function Home() {
             }
           }
         }} className="space-y-4">
-          <div className="bg-stone-50 rounded-3xl shadow-2xl border-2 border-primary-400 overflow-visible">
+          <div className="bg-stone-50 rounded-3xl shadow-2xl border-2 border-primary-400 overflow-hidden">
             {/* Input Area */}
             <div className="relative">
               <input

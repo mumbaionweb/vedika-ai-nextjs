@@ -755,7 +755,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       {/* Input Form at Bottom */}
       <div className="bg-white p-4">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-          <div className="bg-stone-50 rounded-3xl shadow-2xl border-2 border-primary-400 overflow-visible">
+          <div className="bg-stone-50 rounded-3xl shadow-2xl border-2 border-primary-400 overflow-hidden">
             {/* Input Area */}
             <div className="relative">
               <input
