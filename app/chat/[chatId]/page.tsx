@@ -530,9 +530,14 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             timestamp: msg.timestamp,
           }))
           .sort((a, b) => {
-            // Sort by timestamp to ensure correct order
+            // Sort by timestamp, gracefully handling potentially invalid or missing timestamps
             const timeA = new Date(a.timestamp).getTime();
             const timeB = new Date(b.timestamp).getTime();
+
+            // Push messages with invalid timestamps to the end to avoid breaking the sort
+            if (isNaN(timeA)) return 1;
+            if (isNaN(timeB)) return -1;
+
             return timeA - timeB;
           });
 
