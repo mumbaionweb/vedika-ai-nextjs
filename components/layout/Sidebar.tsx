@@ -55,12 +55,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     };
   }, []);
 
-  // Load chat history when hovering over Chat button
+  // Load chat history on initial component mount
   useEffect(() => {
-    if (showChatHistory && chatHistory.length === 0 && !loadingHistory) {
-      loadChatHistory();
-    }
-  }, [showChatHistory, chatHistory.length, loadingHistory, loadChatHistory]);
+    loadChatHistory();
+  }, [loadChatHistory]);
 
   // Format timestamp with relative time display
   function formatTimestamp(timestamp: string): string {
