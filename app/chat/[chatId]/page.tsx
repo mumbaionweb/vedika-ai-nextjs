@@ -232,9 +232,10 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           setStreamingMessageId(null);
           setIsStreaming(false);
           
-          // Update coins if provided
+          // DO NOT update coins from WebSocket, it might be stale.
+          // The REST API call is the source of truth.
           if (event.credits?.remaining) {
-            coinsStore.updateFromChatResponse(event.credits.remaining);
+            console.log(`ℹ️ [CHAT PAGE] WebSocket stream_complete reports ${event.credits.remaining} coins, but we are ignoring it.`);
           }
           
           // Disconnect after a delay
@@ -397,14 +398,15 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           }));
           setStreamingMessageId(null);
           setIsStreaming(false);
-          setIsLoading(false);
+          setIsLoading(false); // ✅ Stop showing "Thinking..."
           
-          // Optionally update coins again from WebSocket for final confirmation
+          // DO NOT update coins from WebSocket, it might be stale.
+          // The REST API call is the source of truth.
           if (event.credits?.remaining) {
-            coinsStore.updateFromChatResponse(event.credits.remaining);
-            console.log(`✅ Final coins check from WebSocket: ${event.credits.remaining}`);
+            console.log(`ℹ️ [CHAT PAGE] WebSocket stream_complete reports ${event.credits.remaining} coins, but we are ignoring it.`);
           }
           
+          // Disconnect after a delay
           setTimeout(() => {
             if (wsServiceRef.current && wsServiceRef.current === wsService) {
               wsServiceRef.current.disconnect();
