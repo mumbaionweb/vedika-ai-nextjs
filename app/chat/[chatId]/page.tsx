@@ -541,13 +541,6 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             return timeA - timeB;
           });
 
-        // Filter out the first user message if it doesn't have a proper timestamp
-        // This happens when loading a conversation that was just created via streaming
-        if (formattedMessages.length > 0 && formattedMessages[0].role === 'user' && !formattedMessages[0].timestamp) {
-          console.log('⚠️ [CHAT PAGE] Filtering out first user message without timestamp');
-          formattedMessages = formattedMessages.slice(1);
-        }
-
         setMessages(formattedMessages);
         
         console.log('📝 [CHAT PAGE] Messages set from API:', {
