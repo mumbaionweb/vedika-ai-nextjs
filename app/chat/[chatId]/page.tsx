@@ -340,13 +340,13 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       console.log('📤 [CHAT PAGE] Submitting follow-up message via REST API first...');
       
       // ✅ STEP 1: Call REST API to start conversation and deduct coins
-      const result = await startChatConversation(
-        userMessage,
-        DeviceManager.getSessionId() || '',
-        DeviceManager.getDeviceId(),
-        selectedModel,
-        interactionMode
-      );
+      const result = await startChatConversation({
+        message: userMessage,
+        session_id: DeviceManager.getSessionId() || '',
+        device_id: DeviceManager.getDeviceId(),
+        model_id: selectedModel,
+        interaction_mode: interactionMode,
+      });
       
       console.log('✅ [CHAT PAGE] REST API call successful:', result);
       
