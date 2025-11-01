@@ -366,6 +366,7 @@ export default function Home() {
               router.push(`/chat/${result.conversation_id}`);
               
               setInputValue(''); // Clear input after submit
+              setDictationTranscript(''); // Also clear dictation transcript
             } catch (error) {
               console.error('❌ Error sending message:', error);
               setError(`Error sending message: ${error}`);

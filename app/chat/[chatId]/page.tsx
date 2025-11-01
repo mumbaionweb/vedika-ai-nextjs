@@ -344,6 +344,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
     const userMessage = input.trim();
     setInput('');
+    setDictationTranscript(''); // Clear dictation transcript on submit
     setIsLoading(true);
     setError(null);
 
