@@ -337,86 +337,94 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     setMessages(prev => [...prev, newUserMessage]);
 
     try {
-      console.log('📤 [CHAT PAGE] Submitting follow-up message via WebSocket:', userMessage);
+      console.log('📤 [CHAT PAGE] Submitting follow-up message via REST API first...');
       
-      // Use existing WebSocket connection or create new one
-      let wsService = wsServiceRef.current || null;
+      // ✅ STEP 1: Call REST API to start conversation and deduct coins
+      const result = await startChatConversation(
+        userMessage,
+        DeviceManager.getSessionId() || '',
+        DeviceManager.getDeviceId(),
+        selectedModel,
+        interactionMode
+      );
       
+      console.log('✅ [CHAT PAGE] REST API call successful:', result);
+      
+      // ✅ STEP 2: Update coins immediately from REST API response
+      coinsStore.updateFromChatResponse(result.vedika_coins_remaining);
+      console.log(`✅ Coins updated: ${result.vedika_coins_remaining} remaining`);
+
+      // ✅ STEP 3: Now connect and stream with WebSocket
+      let wsService = wsServiceRef.current;
       if (!wsService || (wsService as any).ws?.readyState !== WebSocket.OPEN) {
         console.log('🔌 Creating new WebSocket connection for follow-up message');
         wsService = new WebSocketStreamingService(config.api.websocketUrl);
         wsServiceRef.current = wsService;
-        
-        // Set up callbacks for this connection
-        wsService.setCallbacks({
-          onStreamStart: (event) => {
-            console.log('🎬 Stream started for follow-up:', event);
-            const messageId = Date.now().toString();
-            setStreamingMessageId(messageId);
-            setMessages(prev => [...prev, {
-              id: messageId,
-              role: 'assistant',
-              content: '',
-              timestamp: new Date().toISOString(),
-            }]);
-            setIsStreaming(true);
-          },
-          
-          onContentChunk: (event) => {
-            console.log('📦 Chunk received for follow-up:', event.content);
-            setMessages(prev => prev.map(msg => {
-              // Find the last assistant message
-              const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().find(({ m }) => m.role === 'assistant');
-              if (lastAssistantIndex && msg.id === lastAssistantIndex.m.id) {
-                return { ...msg, content: msg.content + event.content };
-              }
-              return msg;
-            }));
-          },
-          
-          onStreamComplete: (event) => {
-            console.log('✅ Stream complete for follow-up:', event);
-            setMessages(prev => prev.map((msg, idx) => {
-              const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().findIndex(({ m }) => m.role === 'assistant');
-              if (lastAssistantIndex !== -1 && idx === prev.length - 1 - lastAssistantIndex && msg.role === 'assistant') {
-                return { ...msg, content: event.full_response || msg.content };
-              }
-              return msg;
-            }));
-            setStreamingMessageId(null);
-            setIsStreaming(false);
-            setIsLoading(false); // ✅ Stop showing "Thinking..."
-            
-            // Update coins if provided
-            if (event.credits?.remaining) {
-              coinsStore.updateFromChatResponse(event.credits.remaining);
-            }
-            
-            // Disconnect after a delay
-            setTimeout(() => {
-              if (wsServiceRef.current && wsServiceRef.current === wsService) {
-                wsServiceRef.current.disconnect();
-              }
-            }, 1000);
-          },
-          
-          onStreamError: (error) => {
-            console.error('❌ Stream error for follow-up:', error);
-            setIsStreaming(false);
-            setIsLoading(false); // ✅ Stop showing "Thinking..."
-          },
-          
-          onCreditsInfo: (data) => {
-            console.log('🪙 Credits info for follow-up:', data);
-            coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
-          },
-          
-          onCreditsExhausted: (data) => {
-            console.warn('⚠️ Credits exhausted for follow-up:', data);
-            coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
-          }
-        });
       }
+      
+      // Set up callbacks
+      wsService.setCallbacks({
+        onStreamStart: (event) => {
+          console.log('🎬 Stream started for follow-up:', event);
+          const messageId = Date.now().toString();
+          setStreamingMessageId(messageId);
+          setMessages(prev => [...prev, {
+            id: messageId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date().toISOString(),
+          }]);
+          setIsStreaming(true);
+        },
+        onContentChunk: (event) => {
+          console.log('📦 Chunk received for follow-up:', event.content);
+          setMessages(prev => prev.map(msg => {
+            const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().find(({ m }) => m.role === 'assistant');
+            if (lastAssistantIndex && msg.id === lastAssistantIndex.m.id) {
+              return { ...msg, content: msg.content + event.content };
+            }
+            return msg;
+          }));
+        },
+        onStreamComplete: (event) => {
+          console.log('✅ Stream complete for follow-up:', event);
+          setMessages(prev => prev.map((msg, idx) => {
+            const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().findIndex(({ m }) => m.role === 'assistant');
+            if (lastAssistantIndex !== -1 && idx === prev.length - 1 - lastAssistantIndex && msg.role === 'assistant') {
+              return { ...msg, content: event.full_response || msg.content };
+            }
+            return msg;
+          }));
+          setStreamingMessageId(null);
+          setIsStreaming(false);
+          setIsLoading(false);
+          
+          // Optionally update coins again from WebSocket for final confirmation
+          if (event.credits?.remaining) {
+            coinsStore.updateFromChatResponse(event.credits.remaining);
+            console.log(`✅ Final coins check from WebSocket: ${event.credits.remaining}`);
+          }
+          
+          setTimeout(() => {
+            if (wsServiceRef.current && wsServiceRef.current === wsService) {
+              wsServiceRef.current.disconnect();
+            }
+          }, 1000);
+        },
+        onStreamError: (error) => {
+          console.error('❌ Stream error for follow-up:', error);
+          setIsStreaming(false);
+          setIsLoading(false);
+        },
+        onCreditsInfo: (data) => {
+          console.log('🪙 Credits info for follow-up:', data);
+          coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
+        },
+        onCreditsExhausted: (data) => {
+          console.warn('⚠️ Credits exhausted for follow-up:', data);
+          coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
+        }
+      });
       
       // Connect and send message
       if ((wsService as any).ws?.readyState !== WebSocket.OPEN) {
@@ -424,8 +432,9 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         console.log('✅ WebSocket connected for follow-up message');
       }
       
+      // Use the conversation_id from the REST API response
       const request = createWebSocketStreamRequest(
-        chatId,
+        result.conversation_id, // ✅ Use new conversation ID from REST API
         userMessage,
         DeviceManager.getSessionId() || '',
         DeviceManager.getDeviceId() || '',
@@ -433,11 +442,16 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       );
       
       wsService.sendMessage(request);
-      console.log('📡 Follow-up message sent via WebSocket');
+      console.log('📡 Follow-up message sent via WebSocket using new conversation data');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [CHAT PAGE] Error sending follow-up message:', error);
-      setError(`Error sending message: ${error}`);
+      // Handle out of coins error
+      if (error.message && error.message.includes('exhausted')) {
+        setError('You have run out of Vedika coins.');
+      } else {
+        setError(`Error sending message: ${error.message || 'Unknown error'}`);
+      }
       setIsLoading(false);
     }
   };
