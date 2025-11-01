@@ -28,6 +28,7 @@ interface ChatPageProps {
 export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = use(params);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasLoadedHistoryRef = useRef(false);
   const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -305,8 +306,26 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     }
   }, [speechTranscript]);
 
+  // Auto-resize textarea height based on content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto'; // Temporarily shrink to get the correct scrollHeight
+      const scrollHeight = textarea.scrollHeight;
+      const maxHeight = 200; // Max height of 200px
+
+      if (scrollHeight > maxHeight) {
+        textarea.style.height = `${maxHeight}px`;
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.height = `${scrollHeight}px`;
+        textarea.style.overflowY = 'hidden';
+      }
+    }
+  }, [input, dictationTranscript]);
+
   // Manual input change handler
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
     
     // When user starts typing, switch to type mode and hide other modes
@@ -774,8 +793,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           <div className="bg-stone-50 rounded-3xl shadow-2xl border-2 border-primary-400 overflow-hidden">
             {/* Input Area */}
             <div className="relative">
-              <input
-                type="text"
+              <textarea
+                ref={textareaRef}
                 value={dictationTranscript || input}
                 onChange={handleInputChange}
                 placeholder={
@@ -785,9 +804,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                     ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
                     : "Ask a Follow-up Question"
                 }
-                className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left ${
-                  isDictating && dictationTranscript ? 'text-gray-600' : ''
-                }`}
+                className="w-full px-6 py-4 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm resize-none overflow-y-hidden"
+                rows={1}
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
               {/* Processing animation for dictation and loading */}
