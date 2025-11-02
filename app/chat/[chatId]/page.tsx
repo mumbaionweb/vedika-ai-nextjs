@@ -28,6 +28,7 @@ interface ChatPageProps {
 export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = use(params);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasLoadedHistoryRef = useRef(false);
   const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -232,9 +233,10 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           setStreamingMessageId(null);
           setIsStreaming(false);
           
-          // Update coins if provided
+          // DO NOT update coins from WebSocket, it might be stale.
+          // The REST API call is the source of truth.
           if (event.credits?.remaining) {
-            coinsStore.updateFromChatResponse(event.credits.remaining);
+            console.log(`ℹ️ [CHAT PAGE] WebSocket stream_complete reports ${event.credits.remaining} coins, but we are ignoring it.`);
           }
           
           // Disconnect after a delay
@@ -304,8 +306,26 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     }
   }, [speechTranscript]);
 
+  // Auto-resize textarea height based on content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto'; // Temporarily shrink to get the correct scrollHeight
+      const scrollHeight = textarea.scrollHeight;
+      const maxHeight = 200; // Max height of 200px
+
+      if (scrollHeight > maxHeight) {
+        textarea.style.height = `${maxHeight}px`;
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.height = `${scrollHeight}px`;
+        textarea.style.overflowY = 'hidden';
+      }
+    }
+  }, [input, dictationTranscript]);
+
   // Manual input change handler
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
     
     // When user starts typing, switch to type mode and hide other modes
@@ -337,86 +357,95 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     setMessages(prev => [...prev, newUserMessage]);
 
     try {
-      console.log('📤 [CHAT PAGE] Submitting follow-up message via WebSocket:', userMessage);
+      console.log('📤 [CHAT PAGE] Submitting follow-up message via REST API first...');
       
-      // Use existing WebSocket connection or create new one
-      let wsService = wsServiceRef.current || null;
+      // ✅ STEP 1: Call REST API to start conversation and deduct coins
+      const result = await startChatConversation({
+        message: userMessage,
+        session_id: DeviceManager.getSessionId() || '',
+        device_id: DeviceManager.getDeviceId(),
+        model_id: selectedModel,
+        interaction_mode: interactionMode,
+      });
       
+      console.log('✅ [CHAT PAGE] REST API call successful:', result);
+      
+      // ✅ STEP 2: Update coins immediately from REST API response
+      coinsStore.updateFromChatResponse(result.vedika_coins_remaining);
+      console.log(`✅ Coins updated: ${result.vedika_coins_remaining} remaining`);
+
+      // ✅ STEP 3: Now connect and stream with WebSocket
+      let wsService = wsServiceRef.current;
       if (!wsService || (wsService as any).ws?.readyState !== WebSocket.OPEN) {
         console.log('🔌 Creating new WebSocket connection for follow-up message');
         wsService = new WebSocketStreamingService(config.api.websocketUrl);
         wsServiceRef.current = wsService;
-        
-        // Set up callbacks for this connection
-        wsService.setCallbacks({
-          onStreamStart: (event) => {
-            console.log('🎬 Stream started for follow-up:', event);
-            const messageId = Date.now().toString();
-            setStreamingMessageId(messageId);
-            setMessages(prev => [...prev, {
-              id: messageId,
-              role: 'assistant',
-              content: '',
-              timestamp: new Date().toISOString(),
-            }]);
-            setIsStreaming(true);
-          },
-          
-          onContentChunk: (event) => {
-            console.log('📦 Chunk received for follow-up:', event.content);
-            setMessages(prev => prev.map(msg => {
-              // Find the last assistant message
-              const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().find(({ m }) => m.role === 'assistant');
-              if (lastAssistantIndex && msg.id === lastAssistantIndex.m.id) {
-                return { ...msg, content: msg.content + event.content };
-              }
-              return msg;
-            }));
-          },
-          
-          onStreamComplete: (event) => {
-            console.log('✅ Stream complete for follow-up:', event);
-            setMessages(prev => prev.map((msg, idx) => {
-              const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().findIndex(({ m }) => m.role === 'assistant');
-              if (lastAssistantIndex !== -1 && idx === prev.length - 1 - lastAssistantIndex && msg.role === 'assistant') {
-                return { ...msg, content: event.full_response || msg.content };
-              }
-              return msg;
-            }));
-            setStreamingMessageId(null);
-            setIsStreaming(false);
-            setIsLoading(false); // ✅ Stop showing "Thinking..."
-            
-            // Update coins if provided
-            if (event.credits?.remaining) {
-              coinsStore.updateFromChatResponse(event.credits.remaining);
-            }
-            
-            // Disconnect after a delay
-            setTimeout(() => {
-              if (wsServiceRef.current && wsServiceRef.current === wsService) {
-                wsServiceRef.current.disconnect();
-              }
-            }, 1000);
-          },
-          
-          onStreamError: (error) => {
-            console.error('❌ Stream error for follow-up:', error);
-            setIsStreaming(false);
-            setIsLoading(false); // ✅ Stop showing "Thinking..."
-          },
-          
-          onCreditsInfo: (data) => {
-            console.log('🪙 Credits info for follow-up:', data);
-            coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
-          },
-          
-          onCreditsExhausted: (data) => {
-            console.warn('⚠️ Credits exhausted for follow-up:', data);
-            coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
-          }
-        });
       }
+      
+      // Set up callbacks
+      wsService.setCallbacks({
+        onStreamStart: (event) => {
+          console.log('🎬 Stream started for follow-up:', event);
+          const messageId = Date.now().toString();
+          setStreamingMessageId(messageId);
+          setMessages(prev => [...prev, {
+            id: messageId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date().toISOString(),
+          }]);
+          setIsStreaming(true);
+        },
+        onContentChunk: (event) => {
+          console.log('📦 Chunk received for follow-up:', event.content);
+          setMessages(prev => prev.map(msg => {
+            const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().find(({ m }) => m.role === 'assistant');
+            if (lastAssistantIndex && msg.id === lastAssistantIndex.m.id) {
+              return { ...msg, content: msg.content + event.content };
+            }
+            return msg;
+          }));
+        },
+        onStreamComplete: (event) => {
+          console.log('✅ Stream complete for follow-up:', event);
+          setMessages(prev => prev.map((msg, idx) => {
+            const lastAssistantIndex = prev.map((m, i) => ({ m, i })).reverse().findIndex(({ m }) => m.role === 'assistant');
+            if (lastAssistantIndex !== -1 && idx === prev.length - 1 - lastAssistantIndex && msg.role === 'assistant') {
+              return { ...msg, content: event.full_response || msg.content };
+            }
+            return msg;
+          }));
+          setStreamingMessageId(null);
+          setIsStreaming(false);
+          setIsLoading(false); // ✅ Stop showing "Thinking..."
+          
+          // DO NOT update coins from WebSocket, it might be stale.
+          // The REST API call is the source of truth.
+          if (event.credits?.remaining) {
+            console.log(`ℹ️ [CHAT PAGE] WebSocket stream_complete reports ${event.credits.remaining} coins, but we are ignoring it.`);
+          }
+          
+          // Disconnect after a delay
+          setTimeout(() => {
+            if (wsServiceRef.current && wsServiceRef.current === wsService) {
+              wsServiceRef.current.disconnect();
+            }
+          }, 1000);
+        },
+        onStreamError: (error) => {
+          console.error('❌ Stream error for follow-up:', error);
+          setIsStreaming(false);
+          setIsLoading(false);
+        },
+        onCreditsInfo: (data) => {
+          console.log('🪙 Credits info for follow-up:', data);
+          coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
+        },
+        onCreditsExhausted: (data) => {
+          console.warn('⚠️ Credits exhausted for follow-up:', data);
+          coinsStore.updateFromChatResponse(data.vedika_coins_remaining);
+        }
+      });
       
       // Connect and send message
       if ((wsService as any).ws?.readyState !== WebSocket.OPEN) {
@@ -424,8 +453,9 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
         console.log('✅ WebSocket connected for follow-up message');
       }
       
+      // Use the conversation_id from the REST API response
       const request = createWebSocketStreamRequest(
-        chatId,
+        result.conversation_id, // ✅ Use new conversation ID from REST API
         userMessage,
         DeviceManager.getSessionId() || '',
         DeviceManager.getDeviceId() || '',
@@ -433,11 +463,16 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       );
       
       wsService.sendMessage(request);
-      console.log('📡 Follow-up message sent via WebSocket');
+      console.log('📡 Follow-up message sent via WebSocket using new conversation data');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [CHAT PAGE] Error sending follow-up message:', error);
-      setError(`Error sending message: ${error}`);
+      // Handle out of coins error
+      if (error.message && error.message.includes('exhausted')) {
+        setError('You have run out of Vedika coins.');
+      } else {
+        setError(`Error sending message: ${error.message || 'Unknown error'}`);
+      }
       setIsLoading(false);
     }
   };
@@ -755,11 +790,11 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
       {/* Input Form at Bottom */}
       <div className="bg-white p-4">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-          <div className="bg-stone-50 rounded-2xl shadow-2xl border-2 border-primary-300 overflow-visible">
+          <div className="bg-stone-50 rounded-3xl shadow-2xl border-2 border-primary-400 overflow-hidden">
             {/* Input Area */}
             <div className="relative">
-              <input
-                type="text"
+              <textarea
+                ref={textareaRef}
                 value={dictationTranscript || input}
                 onChange={handleInputChange}
                 placeholder={
@@ -769,9 +804,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                     ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
                     : "Ask a Follow-up Question"
                 }
-                className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left ${
-                  isDictating && dictationTranscript ? 'text-gray-600' : ''
-                }`}
+                className="w-full px-6 py-4 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm resize-none overflow-y-hidden"
+                rows={1}
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
               {/* Processing animation for dictation and loading */}

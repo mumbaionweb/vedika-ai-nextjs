@@ -21,6 +21,7 @@ import { startChatConversation } from '@/lib/services/apiService';
 export default function Home() {
   const router = useRouter();
   const buttonRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [sessionReady, setSessionReady] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -122,6 +123,24 @@ export default function Home() {
       setInputValue(speechTranscript);
     }
   }, [speechTranscript]);
+
+  // Auto-resize textarea height based on content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto'; // Temporarily shrink to get the correct scrollHeight
+      const scrollHeight = textarea.scrollHeight;
+      const maxHeight = 200; // Max height of 200px
+
+      if (scrollHeight > maxHeight) {
+        textarea.style.height = `${maxHeight}px`;
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.height = `${scrollHeight}px`;
+        textarea.style.overflowY = 'hidden';
+      }
+    }
+  }, [inputValue, dictationTranscript]);
 
   async function initializeSession() {
     try {
@@ -283,7 +302,7 @@ export default function Home() {
 
   return (
     <div className="flex justify-center h-full bg-white pt-48 pb-8">
-      <div className="w-full max-w-3xl">
+      <div className="w-full max-w-3xl px-4">
         {/* Logo */}
         <div className="text-center mb-4">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 bg-clip-text text-transparent mb-2">
@@ -355,20 +374,14 @@ export default function Home() {
             }
           }
         }} className="space-y-4">
-          <div className="bg-stone-50 rounded-2xl shadow-2xl border-2 border-primary-300 overflow-visible">
+          <div className="bg-stone-50 rounded-3xl shadow-2xl border-2 border-primary-400 overflow-hidden">
             {/* Input Area */}
             <div className="relative">
-              <input
-                type="text"
+              <textarea
+                ref={textareaRef}
                 value={dictationTranscript || inputValue}
                 onChange={(e) => {
-                  console.log('📝 Input changed:', e.target.value);
-                  console.log('📝 Current inputValue:', inputValue);
-                  console.log('📝 Current dictationTranscript:', dictationTranscript);
-                  console.log('📝 Current field value:', e.target.value);
                   setInputValue(e.target.value);
-                  
-                  // When user starts typing, switch to type mode and hide other modes
                   if (e.target.value.length > 0 && !isTyping) {
                     setIsTyping(true);
                     setInteractionMode('type');
@@ -377,15 +390,14 @@ export default function Home() {
                   }
                 }}
                 placeholder={
-                  interactionMode === 'dictation' 
+                  interactionMode === 'dictation'
                     ? (isDictating ? "Listening... Speak now" : "Click microphone to start dictating")
                     : interactionMode === 'voice'
                     ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
-                    : "Ask me anything about your business or get help with your tasks."
+                    : "Ask me anything..."
                 }
-                className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm h-24 placeholder:text-left ${
-                  isDictating && dictationTranscript ? 'text-gray-600' : ''
-                }`}
+                className="w-full px-6 py-4 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm resize-none overflow-y-hidden"
+                rows={1}
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
               {/* Processing animation for dictation OR loading state */}
