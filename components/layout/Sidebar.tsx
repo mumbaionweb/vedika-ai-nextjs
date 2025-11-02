@@ -5,6 +5,7 @@ import { apiService } from '@/lib/services/api';
 import type { Conversation } from '@/lib/types/api';
 import type { SidebarProps, User } from '@/types';
 import VaiLogo from '../ui/VaiLogo';
+import { appInitializer } from '@/lib/utils/appInitializer';
 
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -21,24 +22,48 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeOptionsMenu, setActiveOptionsMenu] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<Conversation[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
-  const loadChatHistory = useCallback(async () => {
-    setLoadingHistory(true);
-    try {
-      const result = await apiService.listConversations(5); // Load latest 5 conversations
-      
-      if (result.success) {
-        setChatHistory(result.data.conversations);
-        console.log('✅ Loaded chat history:', result.data.conversations.length, 'conversations');
-      } else {
-        console.error('Failed to load chat history:', result.error);
+  // Initialize session on mount
+  useEffect(() => {
+    async function initSession() {
+      try {
+        const result = await appInitializer.initialize();
+        console.log('✅ [Sidebar] Ready with session:', result.sessionId);
+        setSessionReady(true);
+      } catch (error) {
+        console.error('❌ [Sidebar] Session initialization failed:', error);
       }
-    } catch (error) {
-      console.error('Error loading chat history:', error);
-    } finally {
-      setLoadingHistory(false);
     }
+    initSession();
   }, []);
+
+  // Load chat history once session is ready
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!sessionReady) return;
+
+      setLoadingHistory(true);
+      try {
+        const result = await apiService.listConversations(5); // Load latest 5
+        if (result.success) {
+          setChatHistory(result.data.conversations);
+          console.log('✅ [Sidebar] Loaded chat history:', result.data.conversations.length, 'conversations');
+        } else {
+          console.error('Failed to load chat history:', result.error);
+          setChatHistory([]);
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+        setChatHistory([]);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    loadChatHistory();
+  }, [sessionReady]);
+
 
   // Close options menu when clicking outside
   useEffect(() => {
@@ -54,11 +79,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       document.removeEventListener('click', handleClickOutside);
     };
   }, []);
-
-  // Load chat history on initial component mount
-  useEffect(() => {
-    loadChatHistory();
-  }, [loadChatHistory]);
 
   // Format timestamp with relative time display
   function formatTimestamp(timestamp: string): string {
