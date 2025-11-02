@@ -28,9 +28,9 @@ interface ChatPageProps {
 export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = use(params);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasLoadedHistoryRef = useRef(false);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
 
   // Session state
   const [sessionReady, setSessionReady] = useState(false);
@@ -302,7 +302,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     if (speechTranscript) {
       console.log('📝 Speech transcript updated:', speechTranscript);
       setDictationTranscript(speechTranscript);
-      setInput(speechTranscript);
+      setInput(speechTranscript); // Ensure input is also updated
     }
   }, [speechTranscript]);
 
@@ -344,6 +344,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
 
     const userMessage = input.trim();
     setInput('');
+    setDictationTranscript(''); // Clear dictation transcript on submit
     setIsLoading(true);
     setError(null);
 
@@ -526,21 +527,19 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             id: msg.message_id || `msg-${Date.now()}-${Math.random()}`,
             role: msg.role as 'user' | 'assistant',
             content: msg.content,
-            timestamp: msg.timestamp,
+            timestamp: msg.created_at, // Use created_at from API response
           }))
           .sort((a, b) => {
-            // Sort by timestamp to ensure correct order
-            const timeA = new Date(a.timestamp).getTime();
-            const timeB = new Date(b.timestamp).getTime();
+            // Sort by timestamp, gracefully handling potentially invalid or missing timestamps
+            const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+
+            // Push messages with invalid timestamps to the end to avoid breaking the sort
+            if (isNaN(timeA)) return 1;
+            if (isNaN(timeB)) return -1;
+
             return timeA - timeB;
           });
-
-        // Filter out the first user message if it doesn't have a proper timestamp
-        // This happens when loading a conversation that was just created via streaming
-        if (formattedMessages.length > 0 && formattedMessages[0].role === 'user' && !formattedMessages[0].timestamp) {
-          console.log('⚠️ [CHAT PAGE] Filtering out first user message without timestamp');
-          formattedMessages = formattedMessages.slice(1);
-        }
 
         setMessages(formattedMessages);
         
@@ -795,6 +794,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             <div className="relative">
               <textarea
                 ref={textareaRef}
+                rows={1}
                 value={dictationTranscript || input}
                 onChange={handleInputChange}
                 placeholder={
@@ -804,8 +804,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                     ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
                     : "Ask a Follow-up Question"
                 }
-                className="w-full px-6 py-4 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm resize-none overflow-y-hidden"
-                rows={1}
+                className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm placeholder:text-left resize-none overflow-y-hidden`}
+                style={{ minHeight: '56px' }} // Set a min-height
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
               {/* Processing animation for dictation and loading */}
