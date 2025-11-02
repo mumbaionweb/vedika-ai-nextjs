@@ -527,7 +527,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             id: msg.message_id || `msg-${Date.now()}-${Math.random()}`,
             role: msg.role as 'user' | 'assistant',
             content: msg.content,
-            timestamp: msg.timestamp,
+            timestamp: msg.created_at, // Use created_at from API response
           }))
           .sort((a, b) => {
             // Sort by timestamp, gracefully handling potentially invalid or missing timestamps
