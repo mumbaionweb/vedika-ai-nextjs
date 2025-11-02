@@ -531,8 +531,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
           }))
           .sort((a, b) => {
             // Sort by timestamp, gracefully handling potentially invalid or missing timestamps
-            const timeA = new Date(a.timestamp).getTime();
-            const timeB = new Date(b.timestamp).getTime();
+            const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
 
             // Push messages with invalid timestamps to the end to avoid breaking the sort
             if (isNaN(timeA)) return 1;
