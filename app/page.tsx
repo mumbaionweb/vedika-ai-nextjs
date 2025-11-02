@@ -21,7 +21,7 @@ import { startChatConversation } from '@/lib/services/apiService';
 export default function Home() {
   const router = useRouter();
   const buttonRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
   const [selectedAgent, setSelectedAgent] = useState('search');
   const [sessionReady, setSessionReady] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -120,7 +120,7 @@ export default function Home() {
     if (speechTranscript) {
       console.log('📝 Speech transcript updated:', speechTranscript);
       setDictationTranscript(speechTranscript);
-      setInputValue(speechTranscript);
+      setInputValue(speechTranscript); // Ensure inputValue is also updated
     }
   }, [speechTranscript]);
 
@@ -380,8 +380,10 @@ export default function Home() {
             <div className="relative">
               <textarea
                 ref={textareaRef}
+                rows={1}
                 value={dictationTranscript || inputValue}
                 onChange={(e) => {
+                  console.log('📝 Input changed:', e.target.value);
                   setInputValue(e.target.value);
                   if (e.target.value.length > 0 && !isTyping) {
                     setIsTyping(true);
@@ -397,8 +399,8 @@ export default function Home() {
                     ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
                     : "Ask me anything..."
                 }
-                className="w-full px-6 py-4 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm resize-none overflow-y-hidden"
-                rows={1}
+                className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm placeholder:text-left resize-none overflow-y-hidden`}
+                style={{ minHeight: '56px' }} // Set a min-height
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
               {/* Processing animation for dictation OR loading state */}

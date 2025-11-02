@@ -28,9 +28,9 @@ interface ChatPageProps {
 export default function ChatHistoryPage({ params }: ChatPageProps) {
   const { chatId } = use(params);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasLoadedHistoryRef = useRef(false);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for textarea
 
   // Session state
   const [sessionReady, setSessionReady] = useState(false);
@@ -302,7 +302,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
     if (speechTranscript) {
       console.log('📝 Speech transcript updated:', speechTranscript);
       setDictationTranscript(speechTranscript);
-      setInput(speechTranscript);
+      setInput(speechTranscript); // Ensure input is also updated
     }
   }, [speechTranscript]);
 
@@ -794,6 +794,7 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
             <div className="relative">
               <textarea
                 ref={textareaRef}
+                rows={1}
                 value={dictationTranscript || input}
                 onChange={handleInputChange}
                 placeholder={
@@ -803,8 +804,8 @@ export default function ChatHistoryPage({ params }: ChatPageProps) {
                     ? (isVoiceMode ? "Voice conversation active..." : "Click to start voice conversation")
                     : "Ask a Follow-up Question"
                 }
-                className="w-full px-6 py-4 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm resize-none overflow-y-hidden"
-                rows={1}
+                className={`w-full px-6 py-6 text-lg bg-stone-50 border-none focus:outline-none focus:ring-0 placeholder:text-secondary-400 placeholder:text-sm placeholder:text-left resize-none overflow-y-hidden`}
+                style={{ minHeight: '56px' }} // Set a min-height
                 disabled={isLoading || !sessionReady || isDictating || isVoiceMode}
               />
               {/* Processing animation for dictation and loading */}
